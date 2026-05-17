@@ -1,36 +1,34 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# `deltadesk/deltadesk-web`
 
-## Getting Started
+DeltaDesk is a organization dashboard for gyms, specifically employee management and scheduling, build in the context of a uni software engineering practical course.
 
-First, run the development server:
+It is written in TypeScript and uses Next.js, React, Tailwind, Prisma, Supabase, Supabase Auth, Tabler Icons and Bun.
 
-```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
+[Full Plan - German (.pdf)](https://fxoz.github.io/experiments-lab/SWE-Praktikum.pdf)
+
+## Development
+
+We recommend using [Bun](https://bun.sh/) as the JavaScript runtime and package manager for this project. Use `bun run dev` to start the development server.
+
+### Commit Messages
+
+We use [Conventional Commits](https://www.conventionalcommits.org/en/v1.0.0/) for commit messages. Please follow the format when making commits:
+
+```yml
+feat:           Feature addition or enhancement
+docs:           Markdown changes, documentation updates
+fix:            Bug fixes
+chore:          Changes to the build process or auxiliary tools and libraries
+refactor:       Code improvements that neither fix a bug nor add a feature
+perf:           Performance improvements; use instead of refactor for significant performance improvements
+test:           Adding missing tests or correcting existing tests
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+#### Syntax examples
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
-
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
-
-## Learn More
-
-To learn more about Next.js, take a look at the following resources:
-
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
-
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
-
-## Deploy on Vercel
-
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
-
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+- `feat: add new authentication endpoint`
+  - Basic syntax: `<type>: <description>`
+- `feat!: change port`
+  - ! = Breaking change
+- `feat(api)!: add new authentication endpoint`
+  - (scope) = Provide basic context.

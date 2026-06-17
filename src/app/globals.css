@@ -25,6 +25,10 @@ body {
   font-family: Arial, Helvetica, sans-serif;
 }
 
-a {
+a:not([class]) {
   @apply underline!
+}
+
+button {
+  @apply cursor-pointer;
 }

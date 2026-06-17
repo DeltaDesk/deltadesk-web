@@ -1,12 +1,13 @@
-export default function Home() {
-  return (
-    <div>
-      <main className="text-center my-96">
-        <p>Log in to continue</p>
-        <a href="/login" className="px-4 py-2 bg-black text-white rounded-md">
-          Go to Login
-        </a>
-      </main>
-    </div>
-  );
+import { redirect } from "next/navigation";
+import { createClient } from "@/lib/supabase-server";
+
+export default async function Home() {
+  const supabase = await createClient();
+  const { data: { user } } = await supabase.auth.getUser();
+
+  if (user) {
+    redirect("/panel");
+  }
+
+  redirect("/login");
 }

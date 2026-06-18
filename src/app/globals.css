@@ -8,8 +8,9 @@
 @theme inline {
   --color-background: var(--background);
   --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
+  --font-sans: var(--font-default-sans);
   --font-mono: var(--font-geist-mono);
+  --font-space-grotesk: var(--font-space-grotesk-next);
 }
 
 @media (prefers-color-scheme: dark) {
@@ -19,10 +20,13 @@
   }
 }
 
+h1 {
+  font-family: var(--font-space-grotesk);
+}
+
 body {
   background: var(--background);
   color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
 }
 
 a:not([class]) {

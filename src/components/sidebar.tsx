@@ -14,19 +14,20 @@ import {
 } from "@tabler/icons-react";
 
 const navItems = [
-  { label: "Stundenplan", href: "/panel", icon: IconCalendar, exact: true },
-  { label: "Planung", href: "/panel/plan", icon: IconClipboardList },
-  { label: "Mitarbeiter", href: "/panel/employees", icon: IconUsers },
-  { label: "Krankmeldungen", href: "/panel/sickleave", icon: IconHeartbeat },
-  { label: "Benachrichtigungen", href: "/panel/notifications", icon: IconBell },
+  { label: "Stundenplan", href: "/panel", icon: IconCalendar, exact: true, adminOnly: false },
+  { label: "Planung", href: "/panel/plan", icon: IconClipboardList, adminOnly: false },
+  { label: "Mitarbeiter", href: "/panel/employees", icon: IconUsers, adminOnly: true },
+  { label: "Krankmeldungen", href: "/panel/sickleave", icon: IconHeartbeat, adminOnly: false },
+  { label: "Benachrichtigungen", href: "/panel/notifications", icon: IconBell, adminOnly: false },
 ];
 
 const bottomItems = [
   { label: "Einstellungen", href: "/panel/settings", icon: IconSettings },
 ];
 
-export default function Sidebar() {
+export default function Sidebar({ isAdmin = false }: { isAdmin?: boolean }) {
   const pathname = usePathname();
+  const visibleNavItems = navItems.filter((item) => !item.adminOnly || isAdmin);
 
   function isActive(href: string, exact = false) {
     if (exact) return pathname === href;
@@ -37,7 +38,7 @@ export default function Sidebar() {
     <aside className="flex flex-col w-64 h-screen bg-white border-r border-gray-200 shrink-0">
       {/* Logo */}
       <div className="px-6 py-4 select-none">
-        <span className=" text-[15px] font-semibold text-gray-900 tracking-tight">
+        <span className="font-space-grotesk text-[15px] font-semibold text-gray-900 tracking-tight">
           <IconTriangle size={18} stroke={2} className="text-blue-500 inline mb-1.25 mr-3 stroke-4" />
           DeltaDesk
         </span>
@@ -45,7 +46,7 @@ export default function Sidebar() {
 
       {/* Main nav */}
       <nav className="flex flex-col gap-0.5 flex-1 overflow-y-auto px-3 py-3">
-        {navItems.map(({ label, href, icon: Icon, exact }) => {
+        {visibleNavItems.map(({ label, href, icon: Icon, exact }) => {
           const active = isActive(href, exact);
           return (
             <Link

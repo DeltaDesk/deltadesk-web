@@ -66,7 +66,7 @@ export default async function Home() {
       <header className="mx-auto flex max-w-6xl items-center justify-between px-6 py-6">
         <div className="flex items-center gap-2.5">
           <IconTriangle size={22} stroke={2} className="text-blue-500" />
-          <span className="text-lg font-semibold tracking-tight text-gray-900">DeltaDesk</span>
+          <span className="text-lg font-semibold tracking-tight text-gray-900 font-space-grotesk">DeltaDesk</span>
         </div>
         <Link
           href={cta.href}

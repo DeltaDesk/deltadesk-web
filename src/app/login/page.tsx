@@ -26,7 +26,7 @@ export default function PanelHome() {
         <div className="w-full max-w-sm">
           <div className="mb-8 text-center">
             <IconTriangle size={32} stroke={2} className="text-blue-500 inline mb-1.5" />
-            <h1 className="text-2xl font-semibold text-gray-900 tracking-tight">DeltaDesk</h1>
+            <h1 className="font-space-grotesk text-2xl font-semibold text-gray-900 tracking-tight">DeltaDesk</h1>
             <p className="mt-2 text-sm text-gray-500">Melde dich an, um fortzufahren.</p>
           </div>
 

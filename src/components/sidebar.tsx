@@ -22,7 +22,7 @@ const navItems = [
 ];
 
 const bottomItems = [
-  { label: "Einstellungen", href: "/panel/settings", icon: IconSettings },
+  { label: "Einstellungen", href: "/panel/  ", icon: IconSettings },
 ];
 
 export default function Sidebar({ isAdmin = false }: { isAdmin?: boolean }) {
@@ -37,8 +37,8 @@ export default function Sidebar({ isAdmin = false }: { isAdmin?: boolean }) {
   return (
     <aside className="flex flex-col w-64 h-screen bg-white border-r border-gray-200 shrink-0">
       {/* Logo */}
-      <div className="px-6 py-4 select-none">
-        <span className="font-space-grotesk text-[15px] font-semibold text-gray-900 tracking-tight">
+      <div className="px-6 py-4 select-none border-b border-gray-200">
+        <span className="font-space-grotesk text-[20px] font-semibold text-gray-900 tracking-tight">
           <IconTriangle size={18} stroke={2} className="text-blue-500 inline mb-1.25 mr-3 stroke-4" />
           DeltaDesk
         </span>

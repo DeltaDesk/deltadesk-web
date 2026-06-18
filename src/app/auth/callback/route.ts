@@ -5,7 +5,6 @@ import { cookies } from "next/headers";
 export async function GET(request: Request) {
   const { searchParams, origin } = new URL(request.url);
   const code = searchParams.get("code");
-  // "next" is where you want to redirect the user after a successful login
   const next = searchParams.get("next") ?? "/";
 
   if (code) {
@@ -35,6 +34,5 @@ export async function GET(request: Request) {
     }
   }
 
-  // Return the user to an error page with instructions if something goes wrong
   return NextResponse.redirect(`${origin}/auth/auth-error`);
 }

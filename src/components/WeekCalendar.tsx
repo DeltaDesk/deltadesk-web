@@ -3,10 +3,11 @@
 import { useEffect, useState, useCallback } from "react";
 import { IconChevronLeft, IconChevronRight, IconCalendarEvent } from "@tabler/icons-react";
 import { createClient } from "@/lib/supabase-client";
-import CourseBlock, { type CourseUnit } from "./CourseBlock";
+import CourseBlock from "./CourseBlock";
+import { type CourseUnit } from "@/lib/models/courses";
 
-const DAY_START = 6;
-const DAY_END = 22;
+const DAY_START = 10;
+const DAY_END = 20;
 const SLOT_HEIGHT = 28; // px per 30 min
 const TOTAL_SLOTS = (DAY_END - DAY_START) * 2;
 
@@ -52,10 +53,6 @@ export default function WeekCalendar({ userId, isAdmin }: WeekCalendarProps) {
     setLoading(true);
     const weekEnd = addDays(monday, 7);
 
-    console.log("User ID:", userId);
-    console.log("Monday:", monday.toISOString());
-    console.log("Week End:", weekEnd.toISOString());
-
     let query = supabase
       .from("course_units")
       .select(`
@@ -78,8 +75,6 @@ export default function WeekCalendar({ userId, isAdmin }: WeekCalendarProps) {
       return;
     }
 
-    console.log("Fetched course units:", data);
-
     setUnits((data as CourseUnit[]) ?? []);
     setLoading(false);
   }, [isAdmin, userId]);
@@ -100,9 +95,9 @@ export default function WeekCalendar({ userId, isAdmin }: WeekCalendarProps) {
   }
 
   return (
-    <div className="flex flex-col">
+    <div className="flex flex-col h-full bg-white max-h-screen">
       {/* Header */}
-      <div className="flex flex-wrap items-center justify-between gap-3 px-6 py-4 border-b border-gray-200 bg-white sticky top-0 z-30">
+      <div className="flex flex-wrap items-center justify-between gap-3 px-6 py-4 border-b border-gray-200 bg-white z-30">
         <div>
           <h1 className="text-xl font-semibold text-gray-900">Stundenplan</h1>
           <p className="text-sm text-gray-500 mt-0.5">{formatWeekRange(weekStart)}</p>
@@ -133,25 +128,25 @@ export default function WeekCalendar({ userId, isAdmin }: WeekCalendarProps) {
         </div>
       </div>
 
-      {/* Calendar grid */}
-      <div className="overflow-x-auto bg-white">
+      {/* 2. Modified Container: Added flex-1, min-h-0, overflow-y-auto to allow vertical scrolling inside */}
+      <div className="flex-1 min-h-0 overflow-y-auto overflow-x-auto bg-white">
         {loading ? (
           <div className="flex items-center justify-center h-48 text-gray-400 text-sm gap-2">
             <span className="animate-spin inline-block w-4 h-4 border-2 border-blue-400 border-t-transparent rounded-full" />
             Lädt…
           </div>
         ) : (
-          <div className="min-w-160">
-            {/* Day header row */}
-            <div className="flex border-b border-gray-200 sticky bg-white z-20">
+          <div className="min-w-160 relative">
+            {/* 3. Changed sticky container settings for Day Headers so they stick to the top of THIS container during vertical scroll */}
+            <div className="flex border-b border-gray-200 sticky top-0 bg-white z-20">
               {/* Time gutter */}
-              <div className="w-14 shrink-0" />
+              <div className="w-14 shrink-0 bg-white" />
               {days.map((day, i) => {
                 const isToday = day.toDateString() === new Date().toDateString();
                 return (
                   <div
                     key={i}
-                    className="flex-1 min-w-20 text-center py-2 border-l border-gray-100"
+                    className="flex-1 min-w-30 text-center py-2 border-l border-gray-100"
                   >
                     <span className="text-xs text-gray-400 font-medium">{DE_DAYS[i]}</span>
                     <p
@@ -168,12 +163,12 @@ export default function WeekCalendar({ userId, isAdmin }: WeekCalendarProps) {
 
             {/* Time + event grid */}
             <div className="flex">
-              {/* Time labels (sticky on scroll) */}
+              {/* Time labels (sticky left) */}
               <div className="w-14 shrink-0 sticky left-0 bg-white z-10">
                 {hours.map((h) => (
                   <div
                     key={h}
-                    className="flex items-start justify-end pr-2 text-[10px] text-gray-400 font-medium"
+                    className="flex items-start justify-end pr-2 text-[10px] text-gray-500 font-medium bg-white"
                     style={{ height: SLOT_HEIGHT * 2 }}
                   >
                     <span className="-mt-1.5">{String(h).padStart(2, "0")}:00</span>
@@ -185,14 +180,14 @@ export default function WeekCalendar({ userId, isAdmin }: WeekCalendarProps) {
               {days.map((day, i) => (
                 <div
                   key={i}
-                  className="flex-1 min-w-[80px] relative border-l border-gray-100"
+                  className="flex-1 min-w-30 relative border-l border-gray-150"
                   style={{ height: TOTAL_SLOTS * SLOT_HEIGHT }}
                 >
                   {/* Hour lines */}
                   {hours.map((h) => (
                     <div
                       key={h}
-                      className="absolute left-0 right-0 border-t border-gray-100"
+                      className="absolute left-0 right-0 border-t border-gray-150"
                       style={{ top: (h - DAY_START) * 2 * SLOT_HEIGHT }}
                     />
                   ))}
@@ -206,7 +201,6 @@ export default function WeekCalendar({ userId, isAdmin }: WeekCalendarProps) {
                   ))}
 
                   {/* Course blocks */}
-                  {unitsByDay(day).length === 0 && null}
                   {unitsByDay(day).map((unit) => (
                     <CourseBlock
                       key={unit.id}

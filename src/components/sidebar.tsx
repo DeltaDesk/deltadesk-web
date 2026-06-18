@@ -10,7 +10,7 @@ import {
   IconHeartbeat,
   IconBell,
   IconSettings,
-  IconLayoutDashboard,
+  IconTriangle,
 } from "@tabler/icons-react";
 
 const navItems = [
@@ -36,11 +36,9 @@ export default function Sidebar() {
   return (
     <aside className="flex flex-col w-64 h-screen bg-white border-r border-gray-200 shrink-0">
       {/* Logo */}
-      <div className="flex items-center gap-3 px-5 py-5 border-b border-gray-100">
-        <div className="flex items-center justify-center w-8 h-8 rounded-lg bg-blue-600 text-white">
-          <IconLayoutDashboard size={18} stroke={2} />
-        </div>
-        <span className="text-[15px] font-semibold text-gray-900 tracking-tight">
+      <div className="px-6 py-4 select-none">
+        <span className=" text-[15px] font-semibold text-gray-900 tracking-tight">
+          <IconTriangle size={18} stroke={2} className="text-blue-500 inline mb-1.25 mr-3 stroke-4" />
           DeltaDesk
         </span>
       </div>

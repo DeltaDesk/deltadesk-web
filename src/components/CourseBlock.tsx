@@ -1,13 +1,5 @@
 import { IconMapPin, IconClock } from "@tabler/icons-react";
-
-export interface CourseUnit {
-  id: string;
-  time_start: string;
-  duration_mins: number;
-  leader: string;
-  course_types: { name: string } | null;
-  rooms: { room: string; studios: { name: string } | null } | null;
-}
+import { type CourseUnit } from "@/lib/models/courses";
 
 interface CourseBlockProps {
   unit: CourseUnit;

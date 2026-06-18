@@ -1,0 +1,4 @@
+{
+  "$schema": "https://opencode.ai/config.json",
+  "model": "huggingface/zai-org/GLM-5.2"
+}

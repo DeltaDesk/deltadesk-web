@@ -15,14 +15,14 @@ import {
 
 const navItems = [
   { label: "Stundenplan", href: "/panel", icon: IconCalendar, exact: true },
-  { label: "Planung", href: "/panel/planung", icon: IconClipboardList },
-  { label: "Mitarbeiter", href: "/panel/mitarbeiter", icon: IconUsers },
-  { label: "Krankmeldungen", href: "/panel/krankmeldungen", icon: IconHeartbeat },
-  { label: "Benachrichtigungen", href: "/panel/benachrichtigungen", icon: IconBell },
+  { label: "Planung", href: "/panel/plan", icon: IconClipboardList },
+  { label: "Mitarbeiter", href: "/panel/employees", icon: IconUsers },
+  { label: "Krankmeldungen", href: "/panel/sickleave", icon: IconHeartbeat },
+  { label: "Benachrichtigungen", href: "/panel/notifications", icon: IconBell },
 ];
 
 const bottomItems = [
-  { label: "Einstellungen", href: "/panel/einstellungen", icon: IconSettings },
+  { label: "Einstellungen", href: "/panel/settings", icon: IconSettings },
 ];
 
 export default function Sidebar() {

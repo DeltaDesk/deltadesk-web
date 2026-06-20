@@ -22,7 +22,7 @@ const navItems = [
 ];
 
 const bottomItems = [
-  { label: "Einstellungen", href: "/panel/  ", icon: IconSettings },
+  { label: "Einstellungen", href: "/panel/settings", icon: IconSettings },
 ];
 
 export default function Sidebar({ isAdmin = false }: { isAdmin?: boolean }) {

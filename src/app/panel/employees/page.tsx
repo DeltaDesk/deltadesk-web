@@ -37,7 +37,7 @@ export default async function MitarbeiterPage() {
             <p className="text-sm">Keine Mitarbeiter gefunden</p>
           </div>
         ) : (
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
             {employees.map((employee) => (
               <EmployeeCard key={employee.id} employee={employee} />
             ))}

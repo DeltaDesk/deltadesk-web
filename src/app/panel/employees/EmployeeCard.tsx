@@ -1,4 +1,4 @@
-import { IconPin, IconClock, IconShieldStar, IconCheck } from "@tabler/icons-react";
+import { IconPin, IconClock, IconTool, IconUser } from "@tabler/icons-react";
 import EmployeeAvatar from "./EmployeeAvatar";
 import { type Employee } from "@/lib/models/employees";
 
@@ -19,14 +19,14 @@ export default function EmployeeCard({ employee }: EmployeeCardProps) {
           </h3>
           {employee.is_admin ? (
             <span className="inline-flex items-center gap-1 mt-1">
-              <IconShieldStar size={13} stroke={2.2} className="text-blue-600 shrink-0" />
+              <IconTool size={13} stroke={2.2} className="text-blue-600 shrink-0" />
               <code className="px-1.5 py-0.5 rounded bg-blue-50 text-blue-700 text-[11px] font-medium ">
                 Administrator
               </code>
             </span>
           ) : (
             <span className="inline-flex items-center gap-1 mt-1">
-              <IconCheck size={13} stroke={2.2} className="text-gray-400 shrink-0" />
+              <IconUser size={13} stroke={2.2} className="text-gray-400 shrink-0" />
               <code className="px-1.5 py-0.5 rounded bg-gray-100 text-gray-500 text-[11px] font-medium ">
                 Mitarbeiter
               </code>

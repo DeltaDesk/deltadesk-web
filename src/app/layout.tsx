@@ -1,6 +1,10 @@
 import type { Metadata } from "next";
-import { DM_Sans, Geist_Mono, Space_Grotesk } from "next/font/google";
+import { DM_Sans, Geist_Mono, Space_Grotesk, Geist } from "next/font/google";
 import "./globals.css";
+import { cn } from "@/lib/utils";
+import { Toaster } from "@/components/ui/sonner";
+
+const geist = Geist({subsets:['latin'],variable:'--font-sans'});
 
 const defaultSans = DM_Sans({
   variable: "--font-default-sans",
@@ -30,9 +34,12 @@ export default function RootLayout({
   return (
     <html
       lang="en"
-      className={`${defaultSans.variable} ${geistMono.variable} ${spaceGrotesk.variable} h-full antialiased`}
+      className={cn("h-full", "antialiased", defaultSans.variable, geistMono.variable, spaceGrotesk.variable, "font-sans", geist.variable)}
     >
-      <body className="min-h-full flex flex-col">{children}</body>
+      <body className="min-h-full flex flex-col">
+        {children}
+        <Toaster richColors position="top-right" />
+      </body>
     </html>
   );
 }

@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState, useCallback } from "react";
+import { useEffect, useState } from "react";
 import { IconChevronLeft, IconChevronRight, IconCalendarEvent } from "@tabler/icons-react";
 import { createClient } from "@/lib/supabase-client";
 import CourseBlock from "./CourseBlock";
@@ -49,39 +49,41 @@ export default function WeekCalendar({ userId, isAdmin }: WeekCalendarProps) {
   const [units, setUnits] = useState<CourseUnit[]>([]);
   const [loading, setLoading] = useState(true);
 
-  const fetchUnits = useCallback(async (monday: Date) => {
-    setLoading(true);
-    const weekEnd = addDays(monday, 7);
-
-    let query = supabase
-      .from("course_units")
-      .select(`
-        id, time_start, duration_mins, leader,
-        course_types!course_type ( name ),
-        rooms!room ( room, studios!studio ( name ) )
-      `)
-      .gte("time_start", monday.toISOString())
-      .lt("time_start", weekEnd.toISOString());
-
-    if (!isAdmin) {
-      query = query.eq("leader", userId);
-    }
-
-    const { data, error: supabaseError } = await query;
-    if (supabaseError) {
-      console.error("Error fetching course units:", supabaseError);
-      setUnits([]);
-      setLoading(false);
-      return;
-    }
-
-    setUnits((data as CourseUnit[]) ?? []);
-    setLoading(false);
-  }, [isAdmin, userId]);
-
   useEffect(() => {
-    fetchUnits(weekStart);
-  }, [weekStart, fetchUnits]);
+    let cancelled = false;
+
+    (async () => {
+      setLoading(true);
+      const weekEnd = addDays(weekStart, 7);
+
+      let query = supabase
+        .from("course_units")
+        .select(`
+          id, time_start, duration_mins, leader,
+          course_types!course_type ( name ),
+          rooms!room ( room, studios!studio ( name ) )
+        `)
+        .gte("time_start", weekStart.toISOString())
+        .lt("time_start", weekEnd.toISOString());
+
+      if (!isAdmin) {
+        query = query.eq("leader", userId);
+      }
+
+      const { data, error: supabaseError } = await query;
+      if (cancelled) return;
+
+      if (supabaseError) {
+        console.error("Error fetching course units:", supabaseError);
+        setUnits([]);
+      } else {
+        setUnits((data as unknown as CourseUnit[]) ?? []);
+      }
+      setLoading(false);
+    })();
+
+    return () => { cancelled = true; };
+  }, [weekStart, isAdmin, userId]);
 
   const today = getMondayOf(new Date());
   const isCurrentWeek = weekStart.getTime() === today.getTime();

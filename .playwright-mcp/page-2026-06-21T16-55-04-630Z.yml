@@ -1,0 +1,14 @@
+- generic [active] [ref=e1]:
+  - generic [ref=e4]:
+    - generic [ref=e5]:
+      - img [ref=e6]
+      - heading "DeltaDesk" [level=1] [ref=e8]
+      - paragraph [ref=e9]: Melde dich an, um fortzufahren.
+    - generic [ref=e10]:
+      - button "Mit Google anmelden" [ref=e11] [cursor=pointer]:
+        - img [ref=e12]
+        - text: Mit Google anmelden
+      - paragraph [ref=e14]: Sichere Anmeldung über Google OAuth. Deine Daten werden vertraulich behandelt und nicht an Dritte weitergegeben.
+  - region "Notifications alt+T"
+  - button "Open Next.js Dev Tools" [ref=e20] [cursor=pointer]:
+    - img [ref=e21]

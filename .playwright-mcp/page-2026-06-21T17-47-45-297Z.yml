@@ -1,0 +1,117 @@
+- generic [active] [ref=e1]:
+  - generic [ref=e2]:
+    - banner [ref=e3]:
+      - generic [ref=e4]:
+        - img [ref=e5]
+        - text: DeltaDesk
+      - button "Menü öffnen" [ref=e7] [cursor=pointer]:
+        - img [ref=e8]
+    - complementary [ref=e9]:
+      - generic [ref=e10]:
+        - generic [ref=e11]:
+          - img [ref=e12]
+          - text: DeltaDesk
+        - button "Menü schließen" [ref=e14] [cursor=pointer]:
+          - img [ref=e15]
+      - navigation [ref=e18]:
+        - link "Stundenplan" [ref=e19] [cursor=pointer]:
+          - /url: /panel
+          - img [ref=e20]
+          - generic [ref=e22]: Stundenplan
+        - link "Planung" [ref=e23] [cursor=pointer]:
+          - /url: /panel/plan
+          - img [ref=e24]
+          - generic [ref=e27]: Planung
+        - link "Mitarbeiter" [ref=e29] [cursor=pointer]:
+          - /url: /panel/employees
+          - img [ref=e30]
+          - generic [ref=e35]: Mitarbeiter
+        - link "Krankmeldungen" [ref=e36] [cursor=pointer]:
+          - /url: /panel/sickleave
+          - img [ref=e37]
+          - generic [ref=e40]: Krankmeldungen
+        - link "Benachrichtigungen" [ref=e41] [cursor=pointer]:
+          - /url: /panel/notifications
+          - img [ref=e42]
+          - generic [ref=e45]: Benachrichtigungen
+      - link "Einstellungen" [ref=e47] [cursor=pointer]:
+        - /url: /panel/settings
+        - img [ref=e48]
+        - generic [ref=e51]: Einstellungen
+    - main [ref=e52]:
+      - generic [ref=e53]:
+        - generic [ref=e54]:
+          - heading "Planung" [level=1] [ref=e55]
+          - paragraph [ref=e56]: Räume, Kurse, Studios und Krankmeldungen verwalten
+        - generic [ref=e58]:
+          - tablist [ref=e59]:
+            - tab "Studios" [selected] [ref=e60] [cursor=pointer]:
+              - img
+              - text: Studios
+            - tab "Räume" [ref=e61] [cursor=pointer]:
+              - img
+              - text: Räume
+            - tab "Kursarten" [ref=e62] [cursor=pointer]:
+              - img
+              - text: Kursarten
+            - tab "Kurseinheiten" [ref=e63] [cursor=pointer]:
+              - img
+              - text: Kurseinheiten
+            - tab "Krankmeldungen" [ref=e64] [cursor=pointer]:
+              - img
+              - text: Krankmeldungen
+          - tabpanel "Studios" [ref=e65]:
+            - generic [ref=e66]:
+              - generic [ref=e67]:
+                - generic [ref=e68]:
+                  - heading "Studios" [level=2] [ref=e69]
+                  - paragraph [ref=e70]: 4 Einträge
+                - button "Studio hinzufügen" [ref=e71] [cursor=pointer]:
+                  - img
+                  - text: Studio hinzufügen
+              - table [ref=e73]:
+                - rowgroup [ref=e74]:
+                  - row "Name Stadt Aktionen" [ref=e75]:
+                    - columnheader "Name" [ref=e76]
+                    - columnheader "Stadt" [ref=e77]
+                    - columnheader "Aktionen" [ref=e78]
+                - rowgroup [ref=e79]:
+                  - row "Fit & Aktiv Berlin Berlin Bearbeiten Löschen" [ref=e80]:
+                    - cell "Fit & Aktiv Berlin" [ref=e81]
+                    - cell "Berlin" [ref=e82]
+                    - cell "Bearbeiten Löschen" [ref=e83]:
+                      - generic [ref=e84]:
+                        - button "Bearbeiten" [ref=e85] [cursor=pointer]:
+                          - img
+                        - button "Löschen" [ref=e86] [cursor=pointer]:
+                          - img
+                  - row "Fit & Aktiv Düsseldorf Düsseldorf Bearbeiten Löschen" [ref=e87]:
+                    - cell "Fit & Aktiv Düsseldorf" [ref=e88]
+                    - cell "Düsseldorf" [ref=e89]
+                    - cell "Bearbeiten Löschen" [ref=e90]:
+                      - generic [ref=e91]:
+                        - button "Bearbeiten" [ref=e92] [cursor=pointer]:
+                          - img
+                        - button "Löschen" [ref=e93] [cursor=pointer]:
+                          - img
+                  - row "Fit & Aktiv Köln Köln Bearbeiten Löschen" [ref=e94]:
+                    - cell "Fit & Aktiv Köln" [ref=e95]
+                    - cell "Köln" [ref=e96]
+                    - cell "Bearbeiten Löschen" [ref=e97]:
+                      - generic [ref=e98]:
+                        - button "Bearbeiten" [ref=e99] [cursor=pointer]:
+                          - img
+                        - button "Löschen" [ref=e100] [cursor=pointer]:
+                          - img
+                  - row "Fit & Aktiv Krefeld Krefeld Bearbeiten Löschen" [ref=e101]:
+                    - cell "Fit & Aktiv Krefeld" [ref=e102]
+                    - cell "Krefeld" [ref=e103]
+                    - cell "Bearbeiten Löschen" [ref=e104]:
+                      - generic [ref=e105]:
+                        - button "Bearbeiten" [ref=e106] [cursor=pointer]:
+                          - img
+                        - button "Löschen" [ref=e107] [cursor=pointer]:
+                          - img
+  - region "Notifications alt+T"
+  - button "Open Next.js Dev Tools" [ref=e113] [cursor=pointer]:
+    - img [ref=e114]

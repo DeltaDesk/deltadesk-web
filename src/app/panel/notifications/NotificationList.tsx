@@ -1,8 +1,21 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useTransition } from "react";
 import clsx from "clsx";
+import { toast } from "sonner";
 import { createClient } from "@/lib/supabase-client";
+import { Button } from "@/components/ui/button";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "@/components/ui/alert-dialog";
 import {
   IconInfoCircle,
   IconCircleCheck,
@@ -11,6 +24,7 @@ import {
   IconBell,
   IconChecks,
   IconCheck,
+  IconTrash,
 } from "@tabler/icons-react";
 
 type Severity = "INFO" | "SUCCESS" | "WARN" | "ERROR";
@@ -74,6 +88,7 @@ function formatDate(dateStr: string) {
 
 export default function NotificationList({ initial }: { initial: Notification[] }) {
   const [notifications, setNotifications] = useState(initial);
+  const [pending, startTransition] = useTransition();
   const supabase = createClient();
 
   const unreadCount = notifications.filter((n) => !n.is_read).length;
@@ -92,6 +107,20 @@ export default function NotificationList({ initial }: { initial: Notification[] 
     setNotifications((prev) => prev.map((n) => ({ ...n, is_read: true })));
   }
 
+  function deleteAll() {
+    startTransition(async () => {
+      const ids = notifications.map((n) => n.id);
+      if (!ids.length) return;
+      const { error } = await supabase.from("notifications").delete().in("id", ids);
+      if (error) {
+        toast.error("Löschen fehlgeschlagen");
+        return;
+      }
+      setNotifications([]);
+      toast.success("Alle Benachrichtigungen gelöscht");
+    });
+  }
+
   if (notifications.length === 0) {
     return (
       <div className="flex flex-col items-center justify-center py-20 text-gray-400 gap-3">
@@ -103,15 +132,51 @@ export default function NotificationList({ initial }: { initial: Notification[] 
 
   return (
     <div className="p-6 max-w-2xl">
-      {unreadCount > 0 && (
-        <div className="flex justify-end mb-4">
-          <button
-            onClick={markAllAsRead}
-            className="flex items-center gap-1.5 text-sm font-medium text-blue-600 hover:text-blue-800 transition-colors"
-          >
-            <IconChecks size={16} stroke={2} />
-            Alle als gelesen markieren
-          </button>
+      {notifications.length > 0 && (
+        <div className="flex items-center justify-between mb-4">
+          <AlertDialog>
+            <AlertDialogTrigger asChild>
+              <Button
+                variant="ghost"
+                size="sm"
+                className="text-red-600 hover:text-red-700 hover:bg-red-50"
+              >
+                <IconTrash size={16} stroke={2} />
+                Alle löschen
+              </Button>
+            </AlertDialogTrigger>
+            <AlertDialogContent>
+              <AlertDialogHeader>
+                <AlertDialogTitle>Alle Benachrichtigungen löschen?</AlertDialogTitle>
+                <AlertDialogDescription>
+                  Diese Aktion kann nicht rückgängig gemacht werden. Alle {notifications.length} Benachrichtigungen werden entfernt.
+                </AlertDialogDescription>
+              </AlertDialogHeader>
+              <AlertDialogFooter>
+                <AlertDialogCancel>Abbrechen</AlertDialogCancel>
+                <AlertDialogAction
+                  disabled={pending}
+                  onClick={(e) => {
+                    e.preventDefault();
+                    deleteAll();
+                  }}
+                  className="bg-red-600 hover:bg-red-700 focus-visible:ring-red-600"
+                >
+                  Löschen
+                </AlertDialogAction>
+              </AlertDialogFooter>
+            </AlertDialogContent>
+          </AlertDialog>
+
+          {unreadCount > 0 && (
+            <button
+              onClick={markAllAsRead}
+              className="flex items-center gap-1.5 text-sm font-medium text-blue-600 hover:text-blue-800 transition-colors"
+            >
+              <IconChecks size={16} stroke={2} />
+              Alle als gelesen markieren
+            </button>
+          )}
         </div>
       )}
 

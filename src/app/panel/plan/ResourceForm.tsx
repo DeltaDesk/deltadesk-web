@@ -104,6 +104,12 @@ export default function ResourceForm({
       return;
     }
 
+    const validationError = resource.validate?.(values);
+    if (validationError) {
+      toast.error(validationError);
+      return;
+    }
+
     startTransition(async () => {
       try {
         await saveRow(resource.table, row?.id ?? null, toPayload(resource.fields, values));
@@ -210,7 +216,9 @@ function FieldControl({ id, field, value, onChange, options }: FieldControlProps
           ? "number"
           : field.type === "datetime"
             ? "datetime-local"
-            : "text"
+            : field.type === "date"
+              ? "date"
+              : "text"
       }
       value={value}
       placeholder={field.placeholder}

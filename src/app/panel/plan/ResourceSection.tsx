@@ -41,14 +41,14 @@ export default function ResourceSection({
 
   return (
     <div className="overflow-hidden rounded-xl border border-gray-200 bg-white">
-      <div className="flex items-center justify-between border-b border-gray-200 px-5 py-3.5">
+      <div className="flex flex-col gap-3 border-b border-gray-200 px-5 py-3.5 bg-gray-100 sm:flex-row sm:items-center sm:justify-between">
         <div>
           <h2 className="text-sm font-semibold text-gray-900">{resource.label}</h2>
           <p className="text-xs text-gray-500">
             {rows.length} {rows.length === 1 ? "Eintrag" : "Einträge"}
           </p>
         </div>
-        <Button size="sm" onClick={openAdd}>
+        <Button size="sm" onClick={openAdd} className="w-full sm:w-auto">
           <IconPlus size={16} stroke={2} />
           {resource.singular} hinzufügen
         </Button>

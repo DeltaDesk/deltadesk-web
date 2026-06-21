@@ -9,7 +9,7 @@ export default async function PanelLayout({
   const { isAdmin } = await getSession();
 
   return (
-    <div className="flex h-screen bg-gray-50">
+    <div className="flex flex-col md:flex-row h-screen bg-gray-50">
       <Sidebar isAdmin={isAdmin} />
       <main className="flex-1 overflow-y-auto">{children}</main>
     </div>

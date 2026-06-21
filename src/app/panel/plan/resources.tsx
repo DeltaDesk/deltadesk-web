@@ -7,7 +7,7 @@ import {
   IconHeartbeat,
   type Icon,
 } from "@tabler/icons-react";
-import { formatDateTime } from "./datetime";
+import { formatDate, formatDateTime } from "./datetime";
 
 // Rows are generic record bags shaped by each resource's `select` string.
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -20,7 +20,7 @@ export interface Option {
 
 export type OptionsMap = Record<string, Option[]>;
 
-export type FieldType = "text" | "textarea" | "number" | "datetime" | "select";
+export type FieldType = "text" | "textarea" | "number" | "datetime" | "date" | "select";
 
 export interface FieldDef {
   key: string;
@@ -53,6 +53,8 @@ export interface ResourceDef {
   orderDesc?: boolean;
   columns: ColumnDef[];
   fields: FieldDef[];
+  /** Optional cross-field validation; returns an error message or null. */
+  validate?: (values: Record<string, string>) => string | null;
 }
 
 const muted = (value: ReactNode) =>
@@ -157,11 +159,15 @@ export const RESOURCES: ResourceDef[] = [
     label: "Krankmeldungen",
     singular: "Krankmeldung",
     icon: IconHeartbeat,
-    select: "id, created_at, user, text, user_info:user(name)",
-    orderBy: "created_at",
+    select: "id, created_at, user, text, start_date, end_date, user_info:user(name)",
+    orderBy: "start_date",
     orderDesc: true,
     columns: [
       { label: "Mitarbeiter", render: (r) => muted(r.user_info?.name) },
+      {
+        label: "Zeitraum",
+        render: (r) => `${formatDate(r.start_date)} – ${formatDate(r.end_date)}`,
+      },
       { label: "Notiz", render: (r) => muted(r.text) },
       { label: "Eingereicht", render: (r) => formatDateTime(r.created_at) },
     ],
@@ -173,7 +179,13 @@ export const RESOURCES: ResourceDef[] = [
         required: true,
         optionsKey: "profiles",
       },
+      { key: "start_date", label: "Von", type: "date", required: true },
+      { key: "end_date", label: "Bis", type: "date", required: true },
       { key: "text", label: "Notiz", type: "textarea" },
     ],
+    validate: (v) =>
+      v.start_date && v.end_date && v.end_date < v.start_date
+        ? "Das Enddatum muss am oder nach dem Startdatum liegen"
+        : null,
   },
 ];

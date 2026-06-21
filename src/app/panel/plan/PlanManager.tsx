@@ -12,9 +12,13 @@ interface PlanManagerProps {
 export default function PlanManager({ data, options }: PlanManagerProps) {
   return (
     <Tabs defaultValue={RESOURCES[0].key} className="gap-6">
-      <TabsList className="h-auto flex-wrap">
+      <TabsList className="h-auto w-full flex-wrap justify-start gap-1 group-data-horizontal/tabs:h-auto">
         {RESOURCES.map(({ key, label, icon: Icon }) => (
-          <TabsTrigger key={key} value={key} className="gap-1.5">
+          <TabsTrigger
+            key={key}
+            value={key}
+            className="h-9 flex-none gap-1.5"
+          >
             <Icon size={16} stroke={1.8} />
             {label}
           </TabsTrigger>

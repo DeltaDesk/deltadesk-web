@@ -38,6 +38,9 @@ interface ResourceFormProps {
   onOpenChange: (open: boolean) => void;
 }
 
+/** Sentinel for the "clear selection" item — Radix forbids empty-string values. */
+const CLEAR_VALUE = "__clear__";
+
 type Values = Record<string, string>;
 
 /** Build the initial string values for the form from an existing row (or empty). */
@@ -181,11 +184,19 @@ function FieldControl({ id, field, value, onChange, options }: FieldControlProps
   if (field.type === "select") {
     const items = (field.optionsKey && options[field.optionsKey]) || [];
     return (
-      <Select value={value || undefined} onValueChange={onChange}>
+      <Select
+        value={value || undefined}
+        onValueChange={(v) => onChange(v === CLEAR_VALUE ? "" : v)}
+      >
         <SelectTrigger id={id} className="w-full">
           <SelectValue placeholder="Auswählen…" />
         </SelectTrigger>
         <SelectContent>
+          {!field.required && (
+            <SelectItem value={CLEAR_VALUE} className="text-gray-500">
+              — Keine —
+            </SelectItem>
+          )}
           {items.map((option) => (
             <SelectItem key={option.value} value={option.value}>
               {option.label}

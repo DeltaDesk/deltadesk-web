@@ -4,6 +4,7 @@ import { useState, useTransition } from "react";
 import clsx from "clsx";
 import { toast } from "sonner";
 import { createClient } from "@/lib/supabase-client";
+import { declineSubstitute } from "../plan/actions";
 import { Button } from "@/components/ui/button";
 import {
   AlertDialog,
@@ -25,6 +26,7 @@ import {
   IconChecks,
   IconCheck,
   IconTrash,
+  IconUserOff,
 } from "@tabler/icons-react";
 
 type Severity = "INFO" | "SUCCESS" | "WARN" | "ERROR";
@@ -36,6 +38,8 @@ export interface Notification {
   title: string;
   text: string | null;
   is_read: boolean;
+  unit: string | null;
+  kind: "INFO" | "SUBSTITUTE_REQUEST";
 }
 
 const severityConfig: Record<
@@ -98,6 +102,25 @@ export default function NotificationList({ initial }: { initial: Notification[] 
     setNotifications((prev) =>
       prev.map((n) => (n.id === id ? { ...n, is_read: true } : n))
     );
+  }
+
+  function decline(n: Notification) {
+    if (!n.unit) return;
+    startTransition(async () => {
+      try {
+        await declineSubstitute(n.unit!);
+        setNotifications((prev) =>
+          prev.map((x) =>
+            x.id === n.id ? { ...x, is_read: true, kind: "INFO" } : x
+          )
+        );
+        toast.success("Du wurdest ausgetragen. Eine Vertretung wird gesucht.");
+      } catch (error) {
+        toast.error(
+          error instanceof Error ? error.message : "Ablehnen fehlgeschlagen"
+        );
+      }
+    });
   }
 
   async function markAllAsRead() {
@@ -211,6 +234,44 @@ export default function NotificationList({ initial }: { initial: Notification[] 
                     <span className="block mt-1 text-xs text-gray-400">
                       {formatDate(n.created_at)}
                     </span>
+
+                    {n.kind === "SUBSTITUTE_REQUEST" && n.unit && (
+                      <AlertDialog>
+                        <AlertDialogTrigger asChild>
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            className="mt-2.5 border-red-200 text-red-600 hover:bg-red-50 hover:text-red-700"
+                          >
+                            <IconUserOff size={16} stroke={2} />
+                            Ablehnen / sich austragen lassen
+                          </Button>
+                        </AlertDialogTrigger>
+                        <AlertDialogContent>
+                          <AlertDialogHeader>
+                            <AlertDialogTitle>Kurs ablehnen?</AlertDialogTitle>
+                            <AlertDialogDescription>
+                              Du wirst aus diesem Kurs ausgetragen und es wird automatisch
+                              eine andere Vertretung gesucht. Diese Aktion kann nicht
+                              rückgängig gemacht werden.
+                            </AlertDialogDescription>
+                          </AlertDialogHeader>
+                          <AlertDialogFooter>
+                            <AlertDialogCancel>Abbrechen</AlertDialogCancel>
+                            <AlertDialogAction
+                              disabled={pending}
+                              onClick={(e) => {
+                                e.preventDefault();
+                                decline(n);
+                              }}
+                              className="bg-red-600 hover:bg-red-700 focus-visible:ring-red-600"
+                            >
+                              Ablehnen
+                            </AlertDialogAction>
+                          </AlertDialogFooter>
+                        </AlertDialogContent>
+                      </AlertDialog>
+                    )}
                   </div>
 
                   {/* Action button on the right */}

@@ -4,6 +4,7 @@ import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase-server";
 import { getSession } from "@/lib/session";
 import { addDays, berlinToday } from "./datetime";
+import { assignSubstitute, assignSubstitutesForSick } from "./substitution";
 
 type DbClient = Awaited<ReturnType<typeof createClient>>;
 
@@ -50,25 +51,68 @@ export async function saveRow(
   const supabase = await createClient();
   const payload = sanitize(columns, values);
 
-  const { error } =
-    id == null
-      ? await supabase.from(table).insert(payload)
-      : await supabase.from(table).update(payload).eq("id", id);
+  // A cleared leader is only detectable by comparing against the stored value.
+  let previousLeader: string | null = null;
+  if (table === "course_units" && id != null && "leader" in payload) {
+    const { data } = await supabase
+      .from("course_units")
+      .select("leader")
+      .eq("id", id)
+      .maybeSingle();
+    previousLeader = data?.leader ?? null;
+  }
 
-  if (error) throw new Error(error.message);
+  let newUnitId: string | null = null;
+  if (id == null) {
+    // course_units needs its new id to kick off the substitution search.
+    if (table === "course_units") {
+      const { data, error } = await supabase
+        .from(table)
+        .insert(payload)
+        .select("id")
+        .single();
+      if (error) throw new Error(error.message);
+      newUnitId = data.id as string;
+    } else {
+      const { error } = await supabase.from(table).insert(payload);
+      if (error) throw new Error(error.message);
+    }
+  } else {
+    const { error } = await supabase.from(table).update(payload).eq("id", id);
+    if (error) throw new Error(error.message);
+  }
 
-  // Collapse any overlapping ranges the edit may have created for this employee.
   if (table === "sick_notes") {
-    let userId = payload.user as string | undefined;
+    // Collapse overlapping ranges, then find substitutes for any course the
+    // employee leads within the reported range.
+    let userId = (payload.user as string | null) ?? null;
     if (!userId && id != null) {
       const { data } = await supabase
         .from("sick_notes")
         .select("user")
         .eq("id", id)
         .maybeSingle();
-      userId = data?.user ?? undefined;
+      userId = data?.user ?? null;
     }
-    if (userId) await mergeUserSickNotes(supabase, userId);
+    if (userId) {
+      await mergeUserSickNotes(supabase, userId);
+      const start = payload.start_date as string | null;
+      const end = payload.end_date as string | null;
+      if (start && end) await assignSubstitutesForSick(supabase, userId, start, end);
+    }
+  } else if (table === "course_units") {
+    // New unit without a leader, or an admin clearing the leader → find a substitute.
+    // An explicit reassignment to a different person stays untouched.
+    if (id == null && !payload.leader) {
+      await assignSubstitute(supabase, newUnitId!);
+    } else if (
+      id != null &&
+      "leader" in payload &&
+      payload.leader == null &&
+      previousLeader != null
+    ) {
+      await assignSubstitute(supabase, String(id), previousLeader);
+    }
   }
 
   revalidatePath("/panel/plan");
@@ -162,6 +206,39 @@ export async function submitSickLeave(days: number, text: string) {
   if (error) throw new Error(error.message);
 
   await mergeUserSickNotes(supabase, profile.id);
+  await assignSubstitutesForSick(supabase, profile.id, start, addDays(start, days));
   revalidatePath("/panel/sickleave");
+  revalidatePath("/panel/plan");
+}
+
+/**
+ * A trainer declines a course they were assigned to as a substitute. Their
+ * rejection is recorded (so the engine excludes them on the retry), they are
+ * removed as leader, a fresh substitute is searched, and their own
+ * notification is neutralised. Authorisation is enforced inside the RPC
+ * (only the current user may decline for themselves).
+ */
+export async function declineSubstitute(unitId: string) {
+  const { userId } = await getSession();
+  const supabase = await createClient();
+
+  const { data: me } = await supabase
+    .from("profiles")
+    .select("id")
+    .eq("login", userId)
+    .maybeSingle();
+  if (!me) throw new Error("Profil nicht gefunden");
+
+  await assignSubstitute(supabase, unitId, me.id, true);
+
+  // Defuse the request notification so its button disappears (own-row update).
+  await supabase
+    .from("notifications")
+    .update({ kind: "INFO", is_read: true })
+    .eq("user", me.id)
+    .eq("unit", unitId)
+    .eq("kind", "SUBSTITUTE_REQUEST");
+
+  revalidatePath("/panel/notifications");
   revalidatePath("/panel/plan");
 }

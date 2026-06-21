@@ -1,4 +1,4 @@
-import Sidebar from "@/components/Sidebar";
+import Sidebar from "@/components/sidebar";
 import { getSession } from "@/lib/session";
 
 export default async function PanelLayout({
@@ -6,11 +6,11 @@ export default async function PanelLayout({
 }: {
   children: React.ReactNode;
 }) {
-  const { isAdmin } = await getSession();
+  const { isAdmin, hasProfile } = await getSession();
 
   return (
     <div className="flex flex-col md:flex-row h-screen bg-gray-50">
-      <Sidebar isAdmin={isAdmin} />
+      <Sidebar isAdmin={isAdmin} isApproved={hasProfile} />
       <main className="flex-1 overflow-y-auto">{children}</main>
     </div>
   );

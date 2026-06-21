@@ -1,9 +1,9 @@
 import { createClient } from "@/lib/supabase-server";
-import { getSession } from "@/lib/session";
+import { requireProfile } from "@/lib/session";
 import NotificationList, { type Notification } from "./NotificationList";
 
 export default async function BenachrichtigungenPage() {
-  const { userId } = await getSession();
+  const { userId } = await requireProfile();
   const supabase = await createClient();
 
   const { data, error } = await supabase

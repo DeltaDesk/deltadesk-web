@@ -1,10 +1,10 @@
 import { createClient } from "@/lib/supabase-server";
-import { getSession } from "@/lib/session";
+import { requireProfile } from "@/lib/session";
 import { formatDate } from "../plan/datetime";
 import SickLeaveForm from "./SickLeaveForm";
 
 export default async function KrankmeldungenPage() {
-  const { userId } = await getSession();
+  const { userId } = await requireProfile();
   const supabase = await createClient();
 
   const { data: profile } = await supabase

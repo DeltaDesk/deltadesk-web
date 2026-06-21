@@ -23,8 +23,7 @@ import {
   IconAlertTriangle,
   IconAlertCircle,
   IconBell,
-  IconChecks,
-  IconCheck,
+  IconMailOpened,
   IconTrash,
   IconUserOff,
 } from "@tabler/icons-react";
@@ -196,7 +195,7 @@ export default function NotificationList({ initial }: { initial: Notification[] 
               onClick={markAllAsRead}
               className="flex items-center gap-1.5 text-sm font-medium text-blue-600 hover:text-blue-800 transition-colors"
             >
-              <IconChecks size={16} stroke={2} />
+              <IconMailOpened size={16} stroke={2} />
               Alle als gelesen markieren
             </button>
           )}
@@ -278,10 +277,11 @@ export default function NotificationList({ initial }: { initial: Notification[] 
                   {!n.is_read && (
                     <button
                       onClick={() => markAsRead(n.id)}
-                      className="shrink-0 flex items-center gap-1 text-xs font-medium text-gray-500 hover:text-gray-900 transition-colors bg-white/50 px-2 py-1 rounded-md border border-gray-200"
+                      className="shrink-0 flex items-center gap-1.5 text-xs font-medium text-gray-500 hover:text-gray-900 transition-colors bg-white/50 px-2 py-1 rounded-md border border-gray-200"
                       title="Als gelesen markieren"
                     >
-                      <IconCheck size={20} stroke={2.5} />
+                      <IconMailOpened size={16} stroke={2} />
+                      Gelesen
                     </button>
                   )}
                 </div>

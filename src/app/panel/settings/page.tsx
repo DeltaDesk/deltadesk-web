@@ -1,22 +1,33 @@
 import { IconShieldStar, IconShieldOff } from "@tabler/icons-react";
 import { createClient } from "@/lib/supabase-server";
 import LogoutButton from "@/components/LogoutButton";
+import DefaultStudioSelect from "./DefaultStudioSelect";
+import type { Studio } from "@/lib/models/studios";
 
 export default async function EinstellungenPage() {
   const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();
 
-  const { data: employee, error } = await supabase
-    .from("employees")
-    .select("id, name, is_admin, login")
-    .eq("login", user?.id)
-    .maybeSingle();
+  const [{ data: employee, error }, { data: profile }, { data: studiosRaw }] =
+    await Promise.all([
+      supabase
+        .from("employees")
+        .select("id, name, is_admin, login")
+        .eq("login", user?.id)
+        .maybeSingle(),
+      supabase
+        .from("profiles")
+        .select("default_studio")
+        .eq("login", user?.id)
+        .maybeSingle(),
+      supabase.from("studios").select("id, name, city").order("name"),
+    ]);
 
-    if (error) {
-      console.error("Error fetching employee data:", error);
-    }
+  if (error) console.error("Error fetching employee data:", error);
 
-    const isAdmin = employee?.is_admin === true;
+  const isAdmin = employee?.is_admin === true;
+  const studios = (studiosRaw as Studio[] | null) ?? [];
+  const currentStudioId = profile?.default_studio ?? null;
 
   return (
     <div className="p-8 max-w-3xl">
@@ -61,6 +72,13 @@ export default async function EinstellungenPage() {
             Login (legacy): {employee?.login}</p>
         </div>
 
+
+        <div className="rounded-lg border border-gray-200 bg-white p-4">
+          <label className="text-sm font-medium text-gray-500">Standard-Studio</label>
+          <div className="mt-2">
+            <DefaultStudioSelect studios={studios} currentStudioId={currentStudioId} />
+          </div>
+        </div>
 
         <div className="rounded-lg border border-gray-200 bg-white p-4 flex items-center justify-between">
           <div>

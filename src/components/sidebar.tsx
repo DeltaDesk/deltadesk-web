@@ -17,11 +17,11 @@ import {
 } from "@tabler/icons-react";
 
 const navItems = [
-  { label: "Stundenplan", href: "/panel", icon: IconCalendar, exact: true, adminOnly: false },
-  { label: "Planung", href: "/panel/plan", icon: IconClipboardList, adminOnly: false },
-  { label: "Mitarbeiter", href: "/panel/employees", icon: IconUsers, adminOnly: true },
-  { label: "Krankmeldungen", href: "/panel/sickleave", icon: IconHeartbeat, adminOnly: false },
-  { label: "Benachrichtigungen", href: "/panel/notifications", icon: IconBell, adminOnly: false },
+  { label: "Stundenplan", href: "/panel", icon: IconCalendar, exact: true, adminOnly: false, requiresApproval: true },
+  { label: "Planung", href: "/panel/plan", icon: IconClipboardList, adminOnly: true, requiresApproval: true },
+  { label: "Mitarbeiter", href: "/panel/employees", icon: IconUsers, adminOnly: true, requiresApproval: true },
+  { label: "Krankmeldungen", href: "/panel/sickleave", icon: IconHeartbeat, adminOnly: false, requiresApproval: true },
+  { label: "Benachrichtigungen", href: "/panel/notifications", icon: IconBell, adminOnly: false, requiresApproval: true },
 ];
 
 const bottomItems = [
@@ -33,6 +33,7 @@ type NavItemData = {
   href: string;
   icon: typeof IconCalendar;
   exact?: boolean;
+  requiresApproval?: boolean;
 };
 
 function Brand() {
@@ -83,10 +84,12 @@ function SidebarContent({
   visibleNavItems,
   isActive,
   onNavigate,
+  isApproved,
 }: {
   visibleNavItems: NavItemData[];
   isActive: (href: string, exact?: boolean) => boolean;
   onNavigate: () => void;
+  isApproved: boolean;
 }) {
   return (
     <>
@@ -100,6 +103,14 @@ function SidebarContent({
             onNavigate={onNavigate}
           />
         ))}
+        {!isApproved && (
+          <div className="mt-2 mx-0.5 rounded-lg bg-amber-50 border border-amber-200 px-3 py-2.5">
+            <p className="text-xs font-medium text-amber-800">Konto ausstehend</p>
+            <p className="text-xs text-amber-700 mt-0.5 leading-snug">
+              Dein Konto muss noch von einem Administrator freigegeben werden.
+            </p>
+          </div>
+        )}
       </nav>
 
       {/* Bottom nav */}
@@ -117,11 +128,13 @@ function SidebarContent({
   );
 }
 
-export default function Sidebar({ isAdmin = false }: { isAdmin?: boolean }) {
+export default function Sidebar({ isAdmin = false, isApproved = false }: { isAdmin?: boolean; isApproved?: boolean }) {
   const pathname = usePathname();
   const [open, setOpen] = useState(false);
   const [prevPathname, setPrevPathname] = useState(pathname);
-  const visibleNavItems = navItems.filter((item) => !item.adminOnly || isAdmin);
+  const visibleNavItems = navItems.filter(
+    (item) => (!item.adminOnly || isAdmin) && (!item.requiresApproval || isApproved)
+  );
 
   // Close the mobile drawer whenever the route changes (incl. back/forward).
   if (pathname !== prevPathname) {
@@ -188,6 +201,7 @@ export default function Sidebar({ isAdmin = false }: { isAdmin?: boolean }) {
           visibleNavItems={visibleNavItems}
           isActive={isActive}
           onNavigate={() => setOpen(false)}
+          isApproved={isApproved}
         />
       </aside>
 
@@ -200,6 +214,7 @@ export default function Sidebar({ isAdmin = false }: { isAdmin?: boolean }) {
           visibleNavItems={visibleNavItems}
           isActive={isActive}
           onNavigate={() => {}}
+          isApproved={isApproved}
         />
       </aside>
     </>

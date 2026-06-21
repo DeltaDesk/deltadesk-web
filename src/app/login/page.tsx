@@ -15,7 +15,7 @@ export default function PanelHome() {
     await supabase.auth.signInWithOAuth({
       provider: 'google',
       options: {
-        redirectTo: `${window.location.origin}/auth/callback?next=${encodeURIComponent(redirectNext)}`,
+        redirectTo: `${window.location.origin}/signInWithOAuth?next=${encodeURIComponent(redirectNext)}`,
       },
     })
   };

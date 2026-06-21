@@ -14,12 +14,12 @@ export async function getSession(): Promise<Session> {
 
   const { data } = await supabase
     .from("profiles")
-    .select("is_admin")
+    .select("id, is_admin")
     .eq("login", user.id)
     .maybeSingle();
 
   return {
-    userId: user.id,
+    userId: data?.id ?? user.id,
     isAdmin: data?.is_admin === true,
     hasProfile: data !== null,
   };

@@ -41,10 +41,9 @@ function formatWeekRange(monday: Date): string {
 
 interface WeekCalendarProps {
   userId: string;
-  isAdmin: boolean;
 }
 
-export default function WeekCalendar({ userId, isAdmin }: WeekCalendarProps) {
+export default function WeekCalendar({ userId }: WeekCalendarProps) {
   const [weekStart, setWeekStart] = useState<Date>(() => getMondayOf(new Date()));
   const [units, setUnits] = useState<CourseUnit[]>([]);
   const [loading, setLoading] = useState(true);
@@ -56,7 +55,7 @@ export default function WeekCalendar({ userId, isAdmin }: WeekCalendarProps) {
       setLoading(true);
       const weekEnd = addDays(weekStart, 7);
 
-      let query = supabase
+      const { data, error: supabaseError } = await supabase
         .from("course_units")
         .select(`
           id, time_start, duration_mins, leader,
@@ -64,13 +63,8 @@ export default function WeekCalendar({ userId, isAdmin }: WeekCalendarProps) {
           rooms!room ( room, studios!studio ( name ) )
         `)
         .gte("time_start", weekStart.toISOString())
-        .lt("time_start", weekEnd.toISOString());
-
-      if (!isAdmin) {
-        query = query.eq("leader", userId);
-      }
-
-      const { data, error: supabaseError } = await query;
+        .lt("time_start", weekEnd.toISOString())
+        .eq("leader", userId);
       if (cancelled) return;
 
       if (supabaseError) {
@@ -83,7 +77,7 @@ export default function WeekCalendar({ userId, isAdmin }: WeekCalendarProps) {
     })();
 
     return () => { cancelled = true; };
-  }, [weekStart, isAdmin, userId]);
+  }, [weekStart, userId]);
 
   const today = getMondayOf(new Date());
   const isCurrentWeek = weekStart.getTime() === today.getTime();

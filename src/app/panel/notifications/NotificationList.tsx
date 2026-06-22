@@ -3,8 +3,8 @@
 import { useState, useTransition } from "react";
 import clsx from "clsx";
 import { toast } from "sonner";
-import { createClient } from "@/lib/supabase-client";
 import { declineSubstitute } from "../plan/actions";
+import { markNotificationAsRead, markAllNotificationsAsRead, deleteAllNotifications } from "./actions";
 import { Button } from "@/components/ui/button";
 import {
   AlertDialog,
@@ -92,15 +92,16 @@ function formatDate(dateStr: string) {
 export default function NotificationList({ initial }: { initial: Notification[] }) {
   const [notifications, setNotifications] = useState(initial);
   const [pending, startTransition] = useTransition();
-  const supabase = createClient();
 
   const unreadCount = notifications.filter((n) => !n.is_read).length;
 
-  async function markAsRead(id: string) {
-    await supabase.from("notifications").update({ is_read: true }).eq("id", id);
-    setNotifications((prev) =>
-      prev.map((n) => (n.id === id ? { ...n, is_read: true } : n))
-    );
+  function markAsRead(id: string) {
+    startTransition(async () => {
+      await markNotificationAsRead(id);
+      setNotifications((prev) =>
+        prev.map((n) => (n.id === id ? { ...n, is_read: true } : n))
+      );
+    });
   }
 
   function decline(n: Notification) {
@@ -122,24 +123,28 @@ export default function NotificationList({ initial }: { initial: Notification[] 
     });
   }
 
-  async function markAllAsRead() {
+  function markAllAsRead() {
     const unreadIds = notifications.filter((n) => !n.is_read).map((n) => n.id);
     if (!unreadIds.length) return;
-    await supabase.from("notifications").update({ is_read: true }).in("id", unreadIds);
-    setNotifications((prev) => prev.map((n) => ({ ...n, is_read: true })));
+    startTransition(async () => {
+      await markAllNotificationsAsRead(unreadIds);
+      setNotifications((prev) => prev.map((n) => ({ ...n, is_read: true })));
+    });
   }
 
   function deleteAll() {
     startTransition(async () => {
       const ids = notifications.map((n) => n.id);
       if (!ids.length) return;
-      const { error } = await supabase.from("notifications").delete().in("id", ids);
-      if (error) {
-        toast.error("Löschen fehlgeschlagen");
-        return;
+      try {
+        await deleteAllNotifications(ids);
+        setNotifications([]);
+        toast.success("Alle Benachrichtigungen gelöscht");
+      } catch (error) {
+        toast.error(
+          error instanceof Error ? error.message : "Löschen fehlgeschlagen"
+        );
       }
-      setNotifications([]);
-      toast.success("Alle Benachrichtigungen gelöscht");
     });
   }
 

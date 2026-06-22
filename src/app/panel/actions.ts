@@ -1,8 +1,9 @@
-import WeekCalendar from "@/components/WeekCalendar";
-import { requireProfile } from "@/lib/session";
+"use server";
+
+import { getSession } from "@/lib/session";
 import { createClient } from "@/lib/supabase-server";
-import { getMondayOf, addDays } from "@/lib/time";
 import { type CourseUnit } from "@/lib/models/courses";
+import { addDays } from "@/lib/time";
 
 const COURSE_UNIT_SELECT = `
   id, time_start, duration_mins, leader,
@@ -10,11 +11,9 @@ const COURSE_UNIT_SELECT = `
   rooms!room ( room, studios!studio ( name ) )
 ` as const;
 
-export default async function PanelHome() {
-  const { userId } = await requireProfile();
+export async function fetchWeekUnits(weekStart: Date): Promise<CourseUnit[]> {
+  const { userId } = await getSession();
   const supabase = await createClient();
-
-  const weekStart = getMondayOf(new Date());
   const weekEnd = addDays(weekStart, 7);
 
   const { data, error } = await supabase
@@ -24,9 +23,10 @@ export default async function PanelHome() {
     .lt("time_start", weekEnd.toISOString())
     .eq("leader", userId);
 
-  if (error) console.error("Error fetching course units:", error);
+  if (error) {
+    console.error("Error fetching course units:", error);
+    return [];
+  }
 
-  const initialUnits = (data as unknown as CourseUnit[]) ?? [];
-
-  return <WeekCalendar weekStart={weekStart} initialUnits={initialUnits} />;
+  return (data as unknown as CourseUnit[]) ?? [];
 }

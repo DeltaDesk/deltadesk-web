@@ -1,3 +1,4 @@
+import { cache } from "react";
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase-server";
 
@@ -7,7 +8,7 @@ export interface Session {
   hasProfile: boolean;
 }
 
-export async function getSession(): Promise<Session> {
+export const getSession = cache(async (): Promise<Session> => {
   const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) redirect("/login");
@@ -23,7 +24,7 @@ export async function getSession(): Promise<Session> {
     isAdmin: data?.is_admin === true,
     hasProfile: data !== null,
   };
-}
+});
 
 /** Like getSession but redirects non-employees to /panel/settings. */
 export async function requireProfile(): Promise<Session> {

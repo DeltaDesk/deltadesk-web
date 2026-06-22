@@ -132,13 +132,13 @@ export default function ResourceForm({
     }
 
     startTransition(async () => {
-      try {
-        await saveRow(resource.table, row?.id ?? null, toPayload(resource.fields, values));
-        toast.success(row ? `${resource.singular} aktualisiert` : `${resource.singular} hinzugefügt`);
-        onOpenChange(false);
-      } catch (error) {
-        toast.error(error instanceof Error ? error.message : "Speichern fehlgeschlagen");
+      const result = await saveRow(resource.table, row?.id ?? null, toPayload(resource.fields, values));
+      if (result?.error) {
+        toast.error(result.error);
+        return;
       }
+      toast.success(row ? `${resource.singular} aktualisiert` : `${resource.singular} hinzugefügt`);
+      onOpenChange(false);
     });
   }
 

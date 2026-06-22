@@ -34,16 +34,14 @@ export default function SickLeaveForm() {
   function handleSubmit(event: React.FormEvent) {
     event.preventDefault();
     startTransition(async () => {
-      try {
-        await submitSickLeave(Number(days), text);
-        toast.success("Krankmeldung eingereicht");
-        setText("");
-        setDays("0");
-      } catch (error) {
-        toast.error(
-          error instanceof Error ? error.message : "Einreichen fehlgeschlagen"
-        );
+      const result = await submitSickLeave(Number(days), text);
+      if (result?.error) {
+        toast.error(result.error);
+        return;
       }
+      toast.success("Krankmeldung eingereicht");
+      setText("");
+      setDays("0");
     });
   }
 

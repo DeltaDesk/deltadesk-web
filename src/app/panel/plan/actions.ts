@@ -182,93 +182,101 @@ export async function saveRow(
   table: string,
   id: RowId | null,
   values: Record<string, unknown>,
-) {
-  await requireAdmin();
-  const columns = assertTable(table);
-  const supabase = await createClient();
-  const payload = sanitize(columns, values);
+): Promise<{ error: string } | undefined> {
+  try {
+    await requireAdmin();
+    const columns = assertTable(table);
+    const supabase = await createClient();
+    const payload = sanitize(columns, values);
 
-  if (table === "course_units") {
-    await checkCourseUnitConflicts(supabase, payload, id);
-    await checkWeeklyHours(supabase, payload, id);
-  }
-
-  // A cleared leader is only detectable by comparing against the stored value.
-  let previousLeader: string | null = null;
-  if (table === "course_units" && id != null && "leader" in payload) {
-    const { data } = await supabase
-      .from("course_units")
-      .select("leader")
-      .eq("id", id)
-      .maybeSingle();
-    previousLeader = data?.leader ?? null;
-  }
-
-  let newUnitId: string | null = null;
-  if (id == null) {
-    // course_units needs its new id to kick off the substitution search.
     if (table === "course_units") {
-      const { data, error } = await supabase
-        .from(table)
-        .insert(payload)
-        .select("id")
-        .single();
-      if (error) throw new Error(error.message);
-      newUnitId = data.id as string;
-    } else {
-      const { error } = await supabase.from(table).insert(payload);
-      if (error) throw new Error(error.message);
+      await checkCourseUnitConflicts(supabase, payload, id);
+      await checkWeeklyHours(supabase, payload, id);
     }
-  } else {
-    const { error } = await supabase.from(table).update(payload).eq("id", id);
-    if (error) throw new Error(error.message);
-  }
 
-  if (table === "sick_notes") {
-    // Collapse overlapping ranges, then find substitutes for any course the
-    // employee leads within the reported range.
-    let userId = (payload.user as string | null) ?? null;
-    if (!userId && id != null) {
+    // A cleared leader is only detectable by comparing against the stored value.
+    let previousLeader: string | null = null;
+    if (table === "course_units" && id != null && "leader" in payload) {
       const { data } = await supabase
-        .from("sick_notes")
-        .select("user")
+        .from("course_units")
+        .select("leader")
         .eq("id", id)
         .maybeSingle();
-      userId = data?.user ?? null;
+      previousLeader = data?.leader ?? null;
     }
-    if (userId) {
-      await mergeUserSickNotes(supabase, userId);
-      const start = payload.start_date as string | null;
-      const end = payload.end_date as string | null;
-      if (start && end)
-        await assignSubstitutesForSick(supabase, userId, start, end);
-    }
-  } else if (table === "course_units") {
-    // New unit without a leader, or an admin clearing the leader → find a substitute.
-    // An explicit reassignment to a different person stays untouched.
-    if (id == null && !payload.leader) {
-      await assignSubstitute(supabase, newUnitId!);
-    } else if (
-      id != null &&
-      "leader" in payload &&
-      payload.leader == null &&
-      previousLeader != null
-    ) {
-      await assignSubstitute(supabase, String(id), previousLeader);
-    }
-  }
 
-  revalidatePath("/panel/plan");
+    let newUnitId: string | null = null;
+    if (id == null) {
+      // course_units needs its new id to kick off the substitution search.
+      if (table === "course_units") {
+        const { data, error } = await supabase
+          .from(table)
+          .insert(payload)
+          .select("id")
+          .single();
+        if (error) throw new Error(error.message);
+        newUnitId = data.id as string;
+      } else {
+        const { error } = await supabase.from(table).insert(payload);
+        if (error) throw new Error(error.message);
+      }
+    } else {
+      const { error } = await supabase.from(table).update(payload).eq("id", id);
+      if (error) throw new Error(error.message);
+    }
+
+    if (table === "sick_notes") {
+      // Collapse overlapping ranges, then find substitutes for any course the
+      // employee leads within the reported range.
+      let userId = (payload.user as string | null) ?? null;
+      if (!userId && id != null) {
+        const { data } = await supabase
+          .from("sick_notes")
+          .select("user")
+          .eq("id", id)
+          .maybeSingle();
+        userId = data?.user ?? null;
+      }
+      if (userId) {
+        await mergeUserSickNotes(supabase, userId);
+        const start = payload.start_date as string | null;
+        const end = payload.end_date as string | null;
+        if (start && end)
+          await assignSubstitutesForSick(supabase, userId, start, end);
+      }
+    } else if (table === "course_units") {
+      // New unit without a leader, or an admin clearing the leader → find a substitute.
+      // An explicit reassignment to a different person stays untouched.
+      if (id == null && !payload.leader) {
+        await assignSubstitute(supabase, newUnitId!);
+      } else if (
+        id != null &&
+        "leader" in payload &&
+        payload.leader == null &&
+        previousLeader != null
+      ) {
+        await assignSubstitute(supabase, String(id), previousLeader);
+      }
+    }
+
+    revalidatePath("/panel/plan");
+  } catch (e) {
+    return { error: e instanceof Error ? e.message : "Speichern fehlgeschlagen" };
+  }
 }
 
-export async function deleteRow(table: string, id: RowId) {
-  await requireAdmin();
-  assertTable(table);
-  const supabase = await createClient();
+export async function deleteRow(table: string, id: RowId): Promise<{ error: string } | undefined> {
+  try {
+    await requireAdmin();
+    assertTable(table);
+    const supabase = await createClient();
 
-  const { error } = await supabase.from(table).delete().eq("id", id);
-  if (error) throw new Error(error.message);
-  revalidatePath("/panel/plan");
+    const { error } = await supabase.from(table).delete().eq("id", id);
+    if (error) throw new Error(error.message);
+    revalidatePath("/panel/plan");
+  } catch (e) {
+    return { error: e instanceof Error ? e.message : "Löschen fehlgeschlagen" };
+  }
 }
 
 type SickNote = {
@@ -329,29 +337,33 @@ async function mergeUserSickNotes(
  * Employee self-service: report sick from today for `days` additional days
  * (0 = today only). Overlapping ranges are merged automatically.
  */
-export async function submitSickLeave(days: number, text: string) {
-  if (!Number.isInteger(days) || days < 0 || days > 6) {
-    throw new Error("Ungültige Dauer");
+export async function submitSickLeave(days: number, text: string): Promise<{ error: string } | undefined> {
+  try {
+    if (!Number.isInteger(days) || days < 0 || days > 6) {
+      throw new Error("Ungültige Dauer");
+    }
+
+    const { userId } = await getSession();
+    const supabase = await createClient();
+
+    console.log(`User ${userId} meldet sich krank für ${days} Tage: ${text}`);
+
+    const start = berlinToday();
+    const { error } = await supabase.from("sick_notes").insert({
+      user: userId,
+      start_date: start,
+      end_date: addDays(start, days),
+      text: text.trim() || null,
+    });
+    if (error) throw new Error(error.message);
+
+    await mergeUserSickNotes(supabase, userId);
+    await assignSubstitutesForSick(supabase, userId, start, addDays(start, days));
+    revalidatePath("/panel/sickleave");
+    revalidatePath("/panel/plan");
+  } catch (e) {
+    return { error: e instanceof Error ? e.message : "Einreichen fehlgeschlagen" };
   }
-
-  const { userId } = await getSession();
-  const supabase = await createClient();
-
-  console.log(`User ${userId} meldet sich krank für ${days} Tage: ${text}`);
-
-  const start = berlinToday();
-  const { error } = await supabase.from("sick_notes").insert({
-    user: userId,
-    start_date: start,
-    end_date: addDays(start, days),
-    text: text.trim() || null,
-  });
-  if (error) throw new Error(error.message);
-
-  await mergeUserSickNotes(supabase, userId);
-  await assignSubstitutesForSick(supabase, userId, start, addDays(start, days));
-  revalidatePath("/panel/sickleave");
-  revalidatePath("/panel/plan");
 }
 
 /**
@@ -361,20 +373,24 @@ export async function submitSickLeave(days: number, text: string) {
  * notification is neutralised. Authorisation is enforced inside the RPC
  * (only the current user may decline for themselves).
  */
-export async function declineSubstitute(unitId: string) {
-  const { userId } = await getSession();
-  const supabase = await createClient();
+export async function declineSubstitute(unitId: string): Promise<{ error: string } | undefined> {
+  try {
+    const { userId } = await getSession();
+    const supabase = await createClient();
 
-  await assignSubstitute(supabase, unitId, userId, true);
+    await assignSubstitute(supabase, unitId, userId, true);
 
-  // Defuse the request notification so its button disappears (own-row update).
-  await supabase
-    .from("notifications")
-    .update({ kind: "INFO", is_read: true })
-    .eq("user", userId)
-    .eq("unit", unitId)
-    .eq("kind", "SUBSTITUTE_REQUEST");
+    // Defuse the request notification so its button disappears (own-row update).
+    await supabase
+      .from("notifications")
+      .update({ kind: "INFO", is_read: true })
+      .eq("user", userId)
+      .eq("unit", unitId)
+      .eq("kind", "SUBSTITUTE_REQUEST");
 
-  revalidatePath("/panel/notifications");
-  revalidatePath("/panel/plan");
+    revalidatePath("/panel/notifications");
+    revalidatePath("/panel/plan");
+  } catch (e) {
+    return { error: e instanceof Error ? e.message : "Ablehnen fehlgeschlagen" };
+  }
 }

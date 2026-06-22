@@ -28,12 +28,12 @@ export default function DeleteButton({ table, id, label }: DeleteButtonProps) {
 
   function handleDelete() {
     startTransition(async () => {
-      try {
-        await deleteRow(table, id);
-        toast.success(`${label} gelöscht`);
-      } catch (error) {
-        toast.error(error instanceof Error ? error.message : "Löschen fehlgeschlagen");
+      const result = await deleteRow(table, id);
+      if (result?.error) {
+        toast.error(result.error);
+        return;
       }
+      toast.success(`${label} gelöscht`);
     });
   }
 

@@ -107,19 +107,17 @@ export default function NotificationList({ initial }: { initial: Notification[] 
   function decline(n: Notification) {
     if (!n.unit) return;
     startTransition(async () => {
-      try {
-        await declineSubstitute(n.unit!);
-        setNotifications((prev) =>
-          prev.map((x) =>
-            x.id === n.id ? { ...x, is_read: true, kind: "INFO" } : x
-          )
-        );
-        toast.success("Du wurdest ausgetragen. Eine Vertretung wird gesucht.");
-      } catch (error) {
-        toast.error(
-          error instanceof Error ? error.message : "Ablehnen fehlgeschlagen"
-        );
+      const result = await declineSubstitute(n.unit!);
+      if (result?.error) {
+        toast.error(result.error);
+        return;
       }
+      setNotifications((prev) =>
+        prev.map((x) =>
+          x.id === n.id ? { ...x, is_read: true, kind: "INFO" } : x
+        )
+      );
+      toast.success("Du wurdest ausgetragen. Eine Vertretung wird gesucht.");
     });
   }
 

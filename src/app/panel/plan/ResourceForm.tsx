@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useTransition } from "react";
+import { useRef, useState, useTransition } from "react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import {
@@ -84,6 +84,24 @@ export default function ResourceForm({
   const [formKey, setFormKey] = useState<string>("closed");
   const [pending, startTransition] = useTransition();
 
+  // Track how many Selects are currently open, plus a short guard window after
+  // one closes. A Radix Select sits on a higher dismissable layer than the
+  // Dialog, so clicking inside the form (but outside the open dropdown) closes
+  // the Select *before* the Dialog's outside handler runs — a DOM query would
+  // already see it gone. The ref + guard keeps that click from closing the form.
+  const openSelectsRef = useRef(0);
+  const closeGuardUntilRef = useRef(0);
+
+  function handleSelectOpenChange(selectOpen: boolean) {
+    if (selectOpen) {
+      openSelectsRef.current += 1;
+    } else {
+      openSelectsRef.current = Math.max(0, openSelectsRef.current - 1);
+      closeGuardUntilRef.current = Date.now() + 350;
+    }
+  }
+
+
   // Reset the form when the dialog (re)opens for a different row — done during
   // render (React's recommended pattern) rather than in an effect.
   const currentKey = open ? `open:${row?.id ?? "new"}` : "closed";
@@ -126,7 +144,17 @@ export default function ResourceForm({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-md">
+      <DialogContent
+        className="sm:max-w-md"
+        onInteractOutside={(e) => {
+          if (
+            openSelectsRef.current > 0 ||
+            Date.now() < closeGuardUntilRef.current
+          ) {
+            e.preventDefault();
+          }
+        }}
+      >
         <DialogHeader>
           <DialogTitle>
             {row ? `${resource.singular} bearbeiten` : `${resource.singular} hinzufügen`}
@@ -149,6 +177,7 @@ export default function ResourceForm({
                 value={values[field.key] ?? ""}
                 onChange={(v) => setValue(field.key, v)}
                 options={options}
+                onSelectOpenChange={handleSelectOpenChange}
               />
             </div>
           ))}
@@ -178,15 +207,17 @@ interface FieldControlProps {
   value: string;
   onChange: (value: string) => void;
   options: OptionsMap;
+  onSelectOpenChange: (open: boolean) => void;
 }
 
-function FieldControl({ id, field, value, onChange, options }: FieldControlProps) {
+function FieldControl({ id, field, value, onChange, options, onSelectOpenChange }: FieldControlProps) {
   if (field.type === "select") {
     const items = (field.optionsKey && options[field.optionsKey]) || [];
     return (
       <Select
         value={value || undefined}
         onValueChange={(v) => onChange(v === CLEAR_VALUE ? "" : v)}
+        onOpenChange={onSelectOpenChange}
       >
         <SelectTrigger id={id} className="w-full">
           <SelectValue placeholder="Auswählen…" />

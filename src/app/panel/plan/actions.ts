@@ -47,6 +47,64 @@ async function requireAdmin() {
   if (!isAdmin) throw new Error("Nicht autorisiert");
 }
 
+/** Throws if the given course_unit payload would overlap an existing unit's room or leader. */
+async function checkCourseUnitConflicts(
+  supabase: DbClient,
+  payload: Record<string, unknown>,
+  editId: RowId | null,
+) {
+  const timeStart = payload.time_start as string | null;
+  const durationMins = payload.duration_mins as number | null;
+  if (!timeStart || !durationMins) return;
+
+  const startMs = new Date(timeStart).getTime();
+  const endIso = new Date(startMs + durationMins * 60_000).toISOString();
+
+  const room = payload.room as string | null;
+  const leader = payload.leader as string | null;
+
+  if (room) {
+    const { data } = await supabase
+      .from("course_units")
+      .select("id, time_start, duration_mins, room_info:room(room)")
+      .eq("room", room)
+      .lt("time_start", endIso);
+
+    const conflict = (data ?? []).find((u) => {
+      if (editId != null && String(u.id) === String(editId)) return false;
+      const uEndMs = new Date(u.time_start).getTime() + (u.duration_mins ?? 0) * 60_000;
+      return uEndMs > startMs;
+    });
+
+    if (conflict) {
+      const roomName = (conflict.room_info as { room?: string } | null)?.room ?? "Raum";
+      throw new Error(`Raumkonflikt: „${roomName}" ist zu diesem Zeitpunkt bereits belegt`);
+    }
+  }
+
+  if (leader) {
+    const { data } = await supabase
+      .from("course_units")
+      .select("id, time_start, duration_mins, type_info:course_type(name)")
+      .eq("leader", leader)
+      .lt("time_start", endIso);
+
+    const conflict = (data ?? []).find((u) => {
+      if (editId != null && String(u.id) === String(editId)) return false;
+      const uEndMs = new Date(u.time_start).getTime() + (u.duration_mins ?? 0) * 60_000;
+      return uEndMs > startMs;
+    });
+
+    if (conflict) {
+      const courseName = (conflict.type_info as { name?: string } | null)?.name;
+      const msg = courseName
+        ? `Mitarbeiterkonflikt: Leitung führt zu diesem Zeitpunkt bereits „${courseName}"`
+        : "Mitarbeiterkonflikt: Leitung ist zu diesem Zeitpunkt bereits verplant";
+      throw new Error(msg);
+    }
+  }
+}
+
 export async function saveRow(
   table: string,
   id: RowId | null,
@@ -56,6 +114,10 @@ export async function saveRow(
   const columns = assertTable(table);
   const supabase = await createClient();
   const payload = sanitize(columns, values);
+
+  if (table === "course_units") {
+    await checkCourseUnitConflicts(supabase, payload, id);
+  }
 
   // A cleared leader is only detectable by comparing against the stored value.
   let previousLeader: string | null = null;

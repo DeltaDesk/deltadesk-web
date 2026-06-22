@@ -7,19 +7,11 @@ export default async function KrankmeldungenPage() {
   const { userId } = await requireProfile();
   const supabase = await createClient();
 
-  const { data: profile } = await supabase
-    .from("profiles")
-    .select("id")
-    .eq("login", userId)
-    .maybeSingle();
-
-  const { data: notes } = profile
-    ? await supabase
-        .from("sick_notes")
-        .select("id, start_date, end_date, text")
-        .eq("user", profile.id)
-        .order("start_date", { ascending: false })
-    : { data: [] };
+  const { data: notes } = await supabase
+    .from("sick_notes")
+    .select("id, start_date, end_date, text")
+    .eq("user", userId)
+    .order("start_date", { ascending: false });
 
   const today = new Intl.DateTimeFormat("en-CA", {
     timeZone: "Europe/Berlin",

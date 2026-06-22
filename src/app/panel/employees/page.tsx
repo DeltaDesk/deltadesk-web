@@ -18,12 +18,11 @@ export default async function MitarbeiterPage() {
 
   const supabase = await createClient();
 
-  const [{ data: employeesRaw, error }, { data: currentProfile }, { data: pendingRaw }, { data: workingTimeRaw }] =
+  const [{ data: employeesRaw, error }, { data: pendingRaw }, { data: workingTimeRaw }] =
     await Promise.all([
       supabase
         .from("employees")
         .select("id, name, is_admin, working_time, working_time_hours, default_studio_name"),
-      supabase.from("profiles").select("id").eq("login", userId).maybeSingle(),
       supabase.rpc("get_pending_users"),
       supabase.from("working_time").select("id, name, hours_per_week").order("hours_per_week"),
     ]);
@@ -36,7 +35,7 @@ export default async function MitarbeiterPage() {
   });
 
   const pendingUsers = (pendingRaw as PendingUser[] | null) ?? [];
-  const currentProfileId = currentProfile?.id ?? null;
+  const currentProfileId = userId;
   const workingTimeOptions = (workingTimeRaw as WorkingTimeOption[] | null) ?? [];
 
   return (

@@ -13,7 +13,13 @@ const EDITABLE: Record<string, string[]> = {
   studios: ["name", "city"],
   rooms: ["room", "studio"],
   course_types: ["name", "description"],
-  course_units: ["time_start", "duration_mins", "course_type", "room", "leader"],
+  course_units: [
+    "time_start",
+    "duration_mins",
+    "course_type",
+    "room",
+    "leader",
+  ],
   sick_notes: ["user", "text", "start_date", "end_date"],
 };
 
@@ -44,7 +50,7 @@ async function requireAdmin() {
 export async function saveRow(
   table: string,
   id: RowId | null,
-  values: Record<string, unknown>
+  values: Record<string, unknown>,
 ) {
   await requireAdmin();
   const columns = assertTable(table);
@@ -98,7 +104,8 @@ export async function saveRow(
       await mergeUserSickNotes(supabase, userId);
       const start = payload.start_date as string | null;
       const end = payload.end_date as string | null;
-      if (start && end) await assignSubstitutesForSick(supabase, userId, start, end);
+      if (start && end)
+        await assignSubstitutesForSick(supabase, userId, start, end);
     }
   } else if (table === "course_units") {
     // New unit without a leader, or an admin clearing the leader → find a substitute.
@@ -128,7 +135,12 @@ export async function deleteRow(table: string, id: RowId) {
   revalidatePath("/panel/plan");
 }
 
-type SickNote = { id: number; start_date: string; end_date: string; text: string | null };
+type SickNote = {
+  id: number;
+  start_date: string;
+  end_date: string;
+  text: string | null;
+};
 
 /**
  * Merge a user's overlapping or directly adjacent sick notes into single
@@ -136,7 +148,7 @@ type SickNote = { id: number; start_date: string; end_date: string; text: string
  */
 async function mergeUserSickNotes(
   supabase: DbClient,
-  userId: string
+  userId: string,
 ): Promise<void> {
   const { data: notes } = await supabase
     .from("sick_notes")
@@ -189,24 +201,24 @@ export async function submitSickLeave(days: number, text: string) {
   const { userId } = await getSession();
   const supabase = await createClient();
 
-  const { data: profile } = await supabase
-    .from("profiles")
-    .select("id")
-    .eq("login", userId)
-    .maybeSingle();
-  if (!profile) throw new Error("Profil nicht gefunden");
+  console.log(`User ${userId} meldet sich krank für ${days} Tage: ${text}`);
 
   const start = berlinToday();
   const { error } = await supabase.from("sick_notes").insert({
-    user: profile.id,
+    user: userId,
     start_date: start,
     end_date: addDays(start, days),
     text: text.trim() || null,
   });
   if (error) throw new Error(error.message);
 
-  await mergeUserSickNotes(supabase, profile.id);
-  await assignSubstitutesForSick(supabase, profile.id, start, addDays(start, days));
+  await mergeUserSickNotes(supabase, userId);
+  await assignSubstitutesForSick(
+    supabase,
+    userId,
+    start,
+    addDays(start, days),
+  );
   revalidatePath("/panel/sickleave");
   revalidatePath("/panel/plan");
 }
@@ -222,14 +234,7 @@ export async function declineSubstitute(unitId: string) {
   const { userId } = await getSession();
   const supabase = await createClient();
 
-  const { data: me } = await supabase
-    .from("profiles")
-    .select("id")
-    .eq("login", userId)
-    .maybeSingle();
-  if (!me) throw new Error("Profil nicht gefunden");
-
-  await assignSubstitute(supabase, unitId, me.id, true);
+  await assignSubstitute(supabase, unitId, userId, true);
 
   // Defuse the request notification so its button disappears (own-row update).
   await supabase

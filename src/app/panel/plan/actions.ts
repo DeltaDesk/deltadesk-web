@@ -213,12 +213,7 @@ export async function submitSickLeave(days: number, text: string) {
   if (error) throw new Error(error.message);
 
   await mergeUserSickNotes(supabase, userId);
-  await assignSubstitutesForSick(
-    supabase,
-    userId,
-    start,
-    addDays(start, days),
-  );
+  await assignSubstitutesForSick(supabase, userId, start, addDays(start, days));
   revalidatePath("/panel/sickleave");
   revalidatePath("/panel/plan");
 }
@@ -240,7 +235,7 @@ export async function declineSubstitute(unitId: string) {
   await supabase
     .from("notifications")
     .update({ kind: "INFO", is_read: true })
-    .eq("user", me.id)
+    .eq("user", userId)
     .eq("unit", unitId)
     .eq("kind", "SUBSTITUTE_REQUEST");
 

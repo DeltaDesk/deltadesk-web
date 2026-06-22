@@ -3,7 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase-server";
 import { getSession } from "@/lib/session";
-import { addDays, berlinToday } from "./datetime";
+import { addDays, berlinToday, isoToLocalInput, localInputToIso } from "./datetime";
 import { assignSubstitute, assignSubstitutesForSick } from "./substitution";
 
 type DbClient = Awaited<ReturnType<typeof createClient>>;
@@ -105,6 +105,79 @@ async function checkCourseUnitConflicts(
   }
 }
 
+/** Render a minute count as a German "X Std. Y Min." string. */
+function formatHours(mins: number): string {
+  const h = Math.floor(mins / 60);
+  const m = mins % 60;
+  return m ? `${h} Std. ${m} Min.` : `${h} Std.`;
+}
+
+/**
+ * Monday-based Europe/Berlin ISO week [startIso, endIso) containing `iso`.
+ * Mirrors the week computation inside the `assign_substitute` RPC so the manual
+ * and automatic paths agree on which courses count toward the weekly total.
+ */
+function berlinWeekRange(iso: string): { startIso: string; endIso: string } {
+  const date = isoToLocalInput(iso).slice(0, 10); // YYYY-MM-DD in Berlin
+  const dow = new Date(`${date}T12:00:00Z`).getUTCDay(); // 0=Sun … 6=Sat
+  const isoDow = dow === 0 ? 7 : dow; // 1=Mon … 7=Sun
+  const monday = addDays(date, -(isoDow - 1));
+  return {
+    startIso: localInputToIso(`${monday}T00:00`)!,
+    endIso: localInputToIso(`${addDays(monday, 7)}T00:00`)!,
+  };
+}
+
+/**
+ * Throws if assigning this leader would push their scheduled minutes for the
+ * Berlin week past their working-time model (hours_per_week). A missing model is
+ * treated as zero hours, matching the substitution engine.
+ */
+async function checkWeeklyHours(
+  supabase: DbClient,
+  payload: Record<string, unknown>,
+  editId: RowId | null,
+) {
+  const leader = payload.leader as string | null;
+  const timeStart = payload.time_start as string | null;
+  if (!leader || !timeStart) return;
+  const durationMins = (payload.duration_mins as number | null) ?? 60;
+
+  const { data: profile } = await supabase
+    .from("profiles")
+    .select("name, working_time_info:working_time(hours_per_week)")
+    .eq("id", leader)
+    .maybeSingle();
+
+  const hours =
+    (profile?.working_time_info as { hours_per_week?: number } | null)
+      ?.hours_per_week ?? 0;
+  const limitMins = hours * 60;
+
+  const { startIso, endIso } = berlinWeekRange(timeStart);
+  const { data: units } = await supabase
+    .from("course_units")
+    .select("id, duration_mins")
+    .eq("leader", leader)
+    .gte("time_start", startIso)
+    .lt("time_start", endIso);
+
+  let existing = 0;
+  for (const u of units ?? []) {
+    if (editId != null && String(u.id) === String(editId)) continue;
+    existing += u.duration_mins ?? 60;
+  }
+
+  const total = existing + durationMins;
+  if (total > limitMins) {
+    const name = (profile?.name as string | null) ?? "Mitarbeiter";
+    throw new Error(
+      `Arbeitszeitmodell überschritten: „${name}" käme in dieser Woche auf ` +
+        `${formatHours(total)} (zulässig: ${formatHours(limitMins)}).`,
+    );
+  }
+}
+
 export async function saveRow(
   table: string,
   id: RowId | null,
@@ -117,6 +190,7 @@ export async function saveRow(
 
   if (table === "course_units") {
     await checkCourseUnitConflicts(supabase, payload, id);
+    await checkWeeklyHours(supabase, payload, id);
   }
 
   // A cleared leader is only detectable by comparing against the stored value.

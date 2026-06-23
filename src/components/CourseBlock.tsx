@@ -1,5 +1,6 @@
 import { IconMapPin, IconClock } from "@tabler/icons-react";
 import { type CourseUnit } from "@/lib/models/courses";
+import { cityColor } from "@/lib/cityColor";
 
 interface CourseBlockProps {
   unit: CourseUnit;
@@ -25,18 +26,31 @@ export default function CourseBlock({ unit, slotHeight, dayStart }: CourseBlockP
     ? `${unit.rooms.room}${unit.rooms.studios ? `, ${unit.rooms.studios.name}` : ""}`
     : null;
 
+  const c = cityColor(unit.rooms?.studios?.city);
+
   return (
     <div
-      className="absolute left-1 right-1 bg-blue-50 border border-blue-200 rounded-md px-2 py-1 overflow-hidden cursor-default select-none hover:bg-blue-100 transition-colors"
-      style={{ top, height: Math.max(height, slotHeight) }}
+      id={`unit-${unit.id}`}
+      className="absolute left-1 right-1 border rounded-md px-2 py-1 overflow-hidden cursor-default select-none transition-colors bg-[var(--c-bg)] hover:bg-[var(--c-bg-hover)] border-[var(--c-border)]"
+      style={
+        {
+          top,
+          height: Math.max(height, slotHeight),
+          "--c-bg": c.bg,
+          "--c-bg-hover": c.bgHover,
+          "--c-border": c.border,
+        } as React.CSSProperties
+      }
     >
-      <p className="text-xs font-semibold text-blue-800 truncate leading-tight">{courseName}</p>
-      <p className="flex items-center gap-0.5 text-[10px] text-blue-600 mt-0.5 truncate">
+      <p className="text-xs font-semibold truncate leading-tight" style={{ color: c.text }}>
+        {courseName}
+      </p>
+      <p className="flex items-center gap-0.5 text-[10px] mt-0.5 truncate" style={{ color: c.sub }}>
         <IconClock size={10} stroke={2} className="shrink-0" />
         {timeLabel}
       </p>
       {roomLabel && (
-        <p className="flex items-center gap-0.5 text-[10px] text-blue-500 truncate">
+        <p className="flex items-center gap-0.5 text-[10px] truncate" style={{ color: c.sub }}>
           <IconMapPin size={10} stroke={2} className="shrink-0" />
           {roomLabel}
         </p>

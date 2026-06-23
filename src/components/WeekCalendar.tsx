@@ -3,12 +3,13 @@
 import { useState, useTransition } from "react";
 import { IconChevronLeft, IconChevronRight, IconCalendarEvent } from "@tabler/icons-react";
 import CourseBlock from "./CourseBlock";
+import MobileUpNext from "./MobileUpNext";
 import { type CourseUnit } from "@/lib/models/courses";
 import { getMondayOf, addDays, formatWeekRange } from "@/lib/time";
 import { fetchWeekUnits } from "@/app/panel/actions";
 
-const DAY_START = 10;
-const DAY_END = 20;
+const DAY_START = 6;
+const DAY_END = 23;
 const SLOT_HEIGHT = 28;
 const TOTAL_SLOTS = (DAY_END - DAY_START) * 2;
 
@@ -163,6 +164,8 @@ export default function WeekCalendar({ weekStart: initialWeekStart, initialUnits
           </div>
         )}
       </div>
+
+      <MobileUpNext units={units} />
     </div>
   );
 }

@@ -4,5 +4,5 @@ export interface CourseUnit {
   duration_mins: number;
   leader: string;
   course_types: { name: string } | null;
-  rooms: { room: string; studios: { name: string } | null } | null;
+  rooms: { room: string; studios: { name: string; city: string | null } | null } | null;
 }

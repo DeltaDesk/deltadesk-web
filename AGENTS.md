@@ -1,5 +1,5 @@
 Use Playwright for viewing and interacting with the website. 
-Show a simple like `msg Felix /time:10 Playwright needs login` if I need to log in to the website for you.
+Show a simple toast like `msg Felix /time:10 Playwright needs login` if I need to log into the website for you.
 
 Important: use analyze_image tool, NOT your internal vision capabilities. Only use OCR if absolutely necessary, instead, rely on Playwright for viewing and interacting with the website.
 

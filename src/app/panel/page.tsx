@@ -7,7 +7,7 @@ import { type CourseUnit } from "@/lib/models/courses";
 const COURSE_UNIT_SELECT = `
   id, time_start, duration_mins, leader,
   course_types!course_type ( name ),
-  rooms!room ( room, studios!studio ( name ) )
+  rooms!room ( room, studios!studio ( name, city ) )
 ` as const;
 
 export default async function PanelHome() {

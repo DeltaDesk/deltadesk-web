@@ -8,18 +8,8 @@ export default async function BenachrichtigungenPage() {
 
   const { data, error } = await supabase
     .from("notifications")
-    .select(`
-      id,
-      created_at,
-      severity,
-      title,
-      text,
-      is_read,
-      unit,
-      kind,
-      employees!inner(login)
-    `)
-    .eq("employees.login", userId)
+    .select("id, created_at, severity, title, text, is_read, unit, kind")
+    .eq("user", userId)
     .order("created_at", { ascending: false });
 
   if (error) console.error("Error fetching notifications:", error);

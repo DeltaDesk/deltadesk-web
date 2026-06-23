@@ -34,6 +34,7 @@ type NavItemData = {
   icon: typeof IconCalendar;
   exact?: boolean;
   requiresApproval?: boolean;
+  badge?: number;
 };
 
 function Brand() {
@@ -54,7 +55,7 @@ function NavLink({
   active: boolean;
   onNavigate: () => void;
 }) {
-  const { label, href, icon: Icon } = item;
+  const { label, href, icon: Icon, badge } = item;
   return (
     <Link
       href={href}
@@ -75,7 +76,13 @@ function NavLink({
         )}
       />
       <span className="truncate">{label}</span>
-      {active && <span className="ml-auto w-1.5 h-1.5 rounded-full bg-blue-600" />}
+      {badge ? (
+        <span className="ml-auto inline-flex items-center justify-center min-w-[20px] h-5 px-1.5 text-[11px] font-bold leading-none text-white bg-blue-500 rounded-full">
+          {badge > 99 ? "99+" : badge}
+        </span>
+      ) : (
+        active && <span className="ml-auto w-1.5 h-1.5 rounded-full bg-blue-600" />
+      )}
     </Link>
   );
 }
@@ -128,13 +135,25 @@ function SidebarContent({
   );
 }
 
-export default function Sidebar({ isAdmin = false, isApproved = false }: { isAdmin?: boolean; isApproved?: boolean }) {
+export default function Sidebar({
+  isAdmin = false,
+  isApproved = false,
+  notificationCount = 0,
+}: {
+  isAdmin?: boolean;
+  isApproved?: boolean;
+  notificationCount?: number;
+}) {
   const pathname = usePathname();
   const [open, setOpen] = useState(false);
   const [prevPathname, setPrevPathname] = useState(pathname);
-  const visibleNavItems = navItems.filter(
-    (item) => (!item.adminOnly || isAdmin) && (!item.requiresApproval || isApproved)
-  );
+  const visibleNavItems = navItems
+    .filter((item) => (!item.adminOnly || isAdmin) && (!item.requiresApproval || isApproved))
+    .map((item) =>
+      item.href === "/panel/notifications"
+        ? { ...item, badge: notificationCount }
+        : item
+    );
 
   // Close the mobile drawer whenever the route changes (incl. back/forward).
   if (pathname !== prevPathname) {

@@ -32,6 +32,31 @@ export function formatDate(date?: string | null): string {
   }).format(new Date(`${date}T12:00:00Z`));
 }
 
+/** Format a `YYYY-MM-DD` date as short weekday + day/month, e.g. "Do., 25.06.". */
+export function formatWeekdayShort(date?: string | null): string {
+  if (!date) return "–";
+  const d = new Date(`${date}T12:00:00Z`);
+  const weekday = new Intl.DateTimeFormat("de-DE", {
+    timeZone: TZ,
+    weekday: "short",
+  }).format(d);
+  const dayMonth = new Intl.DateTimeFormat("de-DE", {
+    timeZone: TZ,
+    day: "2-digit",
+    month: "2-digit",
+  }).format(d);
+  return `${weekday}, ${dayMonth}`;
+}
+
+/** Format a `YYYY-MM-DD` date as the full German weekday name, e.g. "Mittwoch". */
+export function formatWeekday(date?: string | null): string {
+  if (!date) return "–";
+  return new Intl.DateTimeFormat("de-DE", {
+    timeZone: TZ,
+    weekday: "long",
+  }).format(new Date(`${date}T12:00:00Z`));
+}
+
 /** Format an ISO timestamp as a readable German date + time. */
 export function formatDateTime(iso?: string | null): string {
   if (!iso) return "–";

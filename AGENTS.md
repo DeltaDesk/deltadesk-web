@@ -1,5 +1,7 @@
 Use Playwright for viewing and interacting with the website. 
-Imporant: use analyze_image tool, NOT your internal vision capabilities!
+Show a simple like `msg Felix /time:10 Playwright needs login` if I need to log in to the website for you.
+
+Important: use analyze_image tool, NOT your internal vision capabilities. Only use OCR if absolutely necessary, instead, rely on Playwright for viewing and interacting with the website.
 
 Speak German inside of the website/UI.
 Use Tabler Icons, Shadcn, React App Router, Tailwind when applicable/neccesary.

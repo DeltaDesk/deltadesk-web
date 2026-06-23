@@ -22,12 +22,29 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
+import {
   type FieldDef,
   type OptionsMap,
   type ResourceDef,
   type Row,
+  type SaveDecision,
+  type SickConflict,
 } from "./resources";
-import { isoToLocalInput, localInputToIso } from "./datetime";
+import {
+  formatWeekday,
+  formatWeekdayShort,
+  isoToLocalInput,
+  localInputToIso,
+} from "./datetime";
 import { saveRow } from "./actions";
 
 interface ResourceFormProps {
@@ -83,6 +100,8 @@ export default function ResourceForm({
   const [values, setValues] = useState<Values>({});
   const [formKey, setFormKey] = useState<string>("closed");
   const [pending, startTransition] = useTransition();
+  // Set when the server reports the chosen leader is sick; drives the AlertDialog.
+  const [conflict, setConflict] = useState<SickConflict | null>(null);
 
   // Track how many Selects are currently open, plus a short guard window after
   // one closes. A Radix Select sits on a higher dismissable layer than the
@@ -107,11 +126,45 @@ export default function ResourceForm({
   const currentKey = open ? `open:${row?.id ?? "new"}` : "closed";
   if (currentKey !== formKey) {
     setFormKey(currentKey);
+    setConflict(null);
     if (open) setValues(initialValues(resource.fields, row));
   }
 
   function setValue(key: string, value: string) {
     setValues((prev) => ({ ...prev, [key]: value }));
+  }
+
+  /**
+   * Persist the form. With no `decision`, a sick leader makes the server return a
+   * conflict, which opens the AlertDialog instead of saving. The dialog re-calls
+   * this with "force" (assign anyway) or "substitute" (find a replacement).
+   */
+  function submit(decision?: SaveDecision) {
+    startTransition(async () => {
+      const result = await saveRow(
+        resource.table,
+        row?.id ?? null,
+        toPayload(resource.fields, values),
+        decision,
+      );
+      if (result && "confirm" in result) {
+        setConflict(result.confirm);
+        return;
+      }
+      if (result?.error) {
+        toast.error(result.error);
+        return;
+      }
+      toast.success(
+        decision === "substitute"
+          ? "Ersatz wird gesucht"
+          : row
+            ? `${resource.singular} aktualisiert`
+            : `${resource.singular} hinzugefügt`,
+      );
+      setConflict(null);
+      onOpenChange(false);
+    });
   }
 
   function handleSubmit(event: React.FormEvent) {
@@ -131,73 +184,129 @@ export default function ResourceForm({
       return;
     }
 
-    startTransition(async () => {
-      const result = await saveRow(resource.table, row?.id ?? null, toPayload(resource.fields, values));
-      if (result?.error) {
-        toast.error(result.error);
-        return;
-      }
-      toast.success(row ? `${resource.singular} aktualisiert` : `${resource.singular} hinzugefügt`);
-      onOpenChange(false);
-    });
+    submit();
   }
 
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent
-        className="sm:max-w-md"
-        onInteractOutside={(e) => {
-          if (
-            openSelectsRef.current > 0 ||
-            Date.now() < closeGuardUntilRef.current
-          ) {
-            e.preventDefault();
-          }
-        }}
-      >
-        <DialogHeader>
-          <DialogTitle>
-            {row ? `${resource.singular} bearbeiten` : `${resource.singular} hinzufügen`}
-          </DialogTitle>
-          <DialogDescription className="sr-only">
-            Formular für {resource.singular}
-          </DialogDescription>
-        </DialogHeader>
+    <>
+      <Dialog open={open} onOpenChange={onOpenChange}>
+        <DialogContent
+          className="sm:max-w-md"
+          onInteractOutside={(e) => {
+            if (
+              openSelectsRef.current > 0 ||
+              Date.now() < closeGuardUntilRef.current
+            ) {
+              e.preventDefault();
+            }
+          }}
+        >
+          <DialogHeader>
+            <DialogTitle>
+              {row ? `${resource.singular} bearbeiten` : `${resource.singular} hinzufügen`}
+            </DialogTitle>
+            <DialogDescription className="sr-only">
+              Formular für {resource.singular}
+            </DialogDescription>
+          </DialogHeader>
 
-        <form onSubmit={handleSubmit} className="space-y-4">
-          {resource.fields.map((field) => (
-            <div key={field.key} className="space-y-1.5">
-              <Label htmlFor={`${resource.key}-${field.key}`}>
-                {field.label}
-                {field.required && <span className="text-red-500"> *</span>}
-              </Label>
-              <FieldControl
-                id={`${resource.key}-${field.key}`}
-                field={field}
-                value={values[field.key] ?? ""}
-                onChange={(v) => setValue(field.key, v)}
-                options={options}
-                onSelectOpenChange={handleSelectOpenChange}
-              />
-            </div>
-          ))}
+          <form onSubmit={handleSubmit} className="space-y-4">
+            {resource.fields.map((field) => (
+              <div key={field.key} className="space-y-1.5">
+                <Label htmlFor={`${resource.key}-${field.key}`}>
+                  {field.label}
+                  {field.required && <span className="text-red-500"> *</span>}
+                </Label>
+                <FieldControl
+                  id={`${resource.key}-${field.key}`}
+                  field={field}
+                  value={values[field.key] ?? ""}
+                  onChange={(v) => setValue(field.key, v)}
+                  options={options}
+                  onSelectOpenChange={handleSelectOpenChange}
+                />
+              </div>
+            ))}
 
-          <DialogFooter>
-            <Button
-              type="button"
-              variant="outline"
-              onClick={() => onOpenChange(false)}
-              disabled={pending}
-            >
-              Abbrechen
-            </Button>
-            <Button type="submit" disabled={pending}>
-              {pending ? "Speichern…" : "Speichern"}
-            </Button>
-          </DialogFooter>
-        </form>
-      </DialogContent>
-    </Dialog>
+            <DialogFooter>
+              <Button
+                type="button"
+                variant="outline"
+                onClick={() => onOpenChange(false)}
+                disabled={pending}
+              >
+                Abbrechen
+              </Button>
+              <Button type="submit" disabled={pending}>
+                {pending ? "Speichern…" : "Speichern"}
+              </Button>
+            </DialogFooter>
+          </form>
+        </DialogContent>
+      </Dialog>
+
+      <SickConflictDialog
+        conflict={conflict}
+        pending={pending}
+        onClose={() => setConflict(null)}
+        onConfirm={submit}
+      />
+    </>
+  );
+}
+
+interface SickConflictDialogProps {
+  conflict: SickConflict | null;
+  pending: boolean;
+  onClose: () => void;
+  onConfirm: (decision: SaveDecision) => void;
+}
+
+/**
+ * Asks how to handle assigning a sick employee. For an `overlap` the unit lies
+ * inside the sick range, so we offer to search a replacement; for a `warn` the
+ * sickness ends the day before, so we offer to assign anyway.
+ */
+function SickConflictDialog({
+  conflict,
+  pending,
+  onClose,
+  onConfirm,
+}: SickConflictDialogProps) {
+  const isOverlap = conflict?.kind === "overlap";
+  return (
+    <AlertDialog open={conflict !== null} onOpenChange={(o) => !o && onClose()}>
+      <AlertDialogContent>
+        {conflict && (
+          <>
+            <AlertDialogHeader>
+              <AlertDialogTitle>
+                {isOverlap ? "Mitarbeiter ist krank" : "Krankmeldung beachten"}
+              </AlertDialogTitle>
+              <AlertDialogDescription>
+                {isOverlap
+                  ? `${conflict.name} ist bis ${formatWeekdayShort(conflict.until)} krank. Ersatz suchen oder abbrechen?`
+                  : `${conflict.name} ist bis ${formatWeekday(conflict.until)} krank. Wirklich bereits ${formatWeekday(conflict.unitDate)} zuweisen?`}
+              </AlertDialogDescription>
+            </AlertDialogHeader>
+            <AlertDialogFooter>
+              <AlertDialogCancel disabled={pending}>
+                {isOverlap ? "Abbrechen" : "Nein"}
+              </AlertDialogCancel>
+              <AlertDialogAction
+                disabled={pending}
+                onClick={(e) => {
+                  e.preventDefault();
+                  onConfirm(isOverlap ? "substitute" : "force");
+                }}
+              >
+                {isOverlap ? "Ersatz suchen" : "Ja"}
+              </AlertDialogAction>
+            </AlertDialogFooter>
+          </>
+        )}
+      </AlertDialogContent>
+    </AlertDialog>
   );
 }
 

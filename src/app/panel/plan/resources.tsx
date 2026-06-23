@@ -20,6 +20,25 @@ export interface Option {
 
 export type OptionsMap = Record<string, Option[]>;
 
+/**
+ * Returned by `saveRow` when an admin tries to make a sick employee the leader
+ * of a course unit, so the form can ask how to proceed.
+ * - `overlap`: the unit falls within the sick range → offer to find a substitute.
+ * - `warn`: the sickness ends the day before the unit → offer to assign anyway.
+ */
+export interface SickConflict {
+  kind: "overlap" | "warn";
+  /** Name of the sick employee. */
+  name: string;
+  /** Last day of the sick note (`YYYY-MM-DD`). */
+  until: string;
+  /** The course unit's Europe/Berlin date (`YYYY-MM-DD`). */
+  unitDate: string;
+}
+
+/** Choice made in the sick-conflict dialog: keep the sick leader, or replace them. */
+export type SaveDecision = "force" | "substitute";
+
 export type FieldType = "text" | "textarea" | "number" | "datetime" | "date" | "select";
 
 export interface FieldDef {

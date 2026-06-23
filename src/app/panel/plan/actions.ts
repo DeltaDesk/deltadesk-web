@@ -5,6 +5,7 @@ import { createClient } from "@/lib/supabase-server";
 import { getSession } from "@/lib/session";
 import { addDays, berlinToday, isoToLocalInput, localInputToIso } from "./datetime";
 import { assignSubstitute, assignSubstitutesForSick } from "./substitution";
+import type { SaveDecision, SickConflict } from "./resources";
 
 type DbClient = Awaited<ReturnType<typeof createClient>>;
 
@@ -178,11 +179,55 @@ async function checkWeeklyHours(
   }
 }
 
+/**
+ * Detect whether making `leader` the head of a unit starting at `timeStart`
+ * clashes with one of their sick notes. Returns the details the form needs to
+ * confirm, or null when the assignment is unproblematic.
+ * - `overlap`: the unit's Berlin date lies inside a sick range.
+ * - `warn`: a sick note ends exactly the day before the unit.
+ */
+async function findSickConflict(
+  supabase: DbClient,
+  leader: string,
+  timeStart: string,
+): Promise<SickConflict | null> {
+  const unitDate = isoToLocalInput(timeStart).slice(0, 10); // YYYY-MM-DD (Berlin)
+  const dayBefore = addDays(unitDate, -1);
+
+  // Notes that either cover the unit's date or end the day right before it.
+  const { data } = await supabase
+    .from("sick_notes")
+    .select("start_date, end_date, user_info:user(name)")
+    .eq("user", leader)
+    .lte("start_date", unitDate)
+    .gte("end_date", dayBefore)
+    .order("end_date", { ascending: false });
+
+  const notes = data ?? [];
+  if (notes.length === 0) return null;
+
+  const name =
+    (notes[0].user_info as { name?: string } | null)?.name ?? "Mitarbeiter";
+
+  // Overlap takes priority over the day-before warning.
+  const overlap = notes.find(
+    (n) => n.start_date <= unitDate && n.end_date >= unitDate,
+  );
+  if (overlap)
+    return { kind: "overlap", name, until: overlap.end_date, unitDate };
+
+  const warn = notes.find((n) => n.end_date === dayBefore);
+  if (warn) return { kind: "warn", name, until: warn.end_date, unitDate };
+
+  return null;
+}
+
 export async function saveRow(
   table: string,
   id: RowId | null,
   values: Record<string, unknown>,
-): Promise<{ error: string } | undefined> {
+  decision?: SaveDecision,
+): Promise<{ error: string } | { confirm: SickConflict } | undefined> {
   try {
     await requireAdmin();
     const columns = assertTable(table);
@@ -190,6 +235,20 @@ export async function saveRow(
     const payload = sanitize(columns, values);
 
     if (table === "course_units") {
+      const leader = payload.leader as string | null;
+      const timeStart = payload.time_start as string | null;
+
+      // Sick-leave guard: assigning a sick employee needs explicit confirmation.
+      // Without a decision yet, hand the conflict back so the form can ask.
+      if (leader && timeStart && !decision) {
+        const conflict = await findSickConflict(supabase, leader, timeStart);
+        if (conflict) return { confirm: conflict };
+      }
+
+      // "Ersatz suchen": save the unit without the sick leader; the engine picks
+      // a replacement after the row is written.
+      if (decision === "substitute") payload.leader = null;
+
       await checkCourseUnitConflicts(supabase, payload, id);
       await checkWeeklyHours(supabase, payload, id);
     }
@@ -245,9 +304,12 @@ export async function saveRow(
           await assignSubstitutesForSick(supabase, userId, start, end);
       }
     } else if (table === "course_units") {
-      // New unit without a leader, or an admin clearing the leader → find a substitute.
-      // An explicit reassignment to a different person stays untouched.
-      if (id == null && !payload.leader) {
+      // Admin assigned a sick employee and chose "Ersatz suchen" → the leader was
+      // nulled above; let the engine fill the now-empty slot.
+      if (decision === "substitute") {
+        await assignSubstitute(supabase, id == null ? newUnitId! : String(id));
+      } else if (id == null && !payload.leader) {
+        // New unit created without a leader → find a substitute.
         await assignSubstitute(supabase, newUnitId!);
       } else if (
         id != null &&
@@ -255,6 +317,7 @@ export async function saveRow(
         payload.leader == null &&
         previousLeader != null
       ) {
+        // Admin cleared the leader of an existing unit → find a substitute.
         await assignSubstitute(supabase, String(id), previousLeader);
       }
     }

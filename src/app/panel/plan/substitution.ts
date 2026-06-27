@@ -20,13 +20,15 @@ export async function assignSubstitute(
   unitId: string,
   outgoing: string | null = null,
   recordRejection = false,
-) {
-  const { error } = await supabase.rpc("assign_substitute", {
+): Promise<string | null> {
+  const { data, error } = await supabase.rpc("assign_substitute", {
     p_unit: unitId,
     p_outgoing: outgoing,
     p_record_rejection: recordRejection,
   });
   if (error) throw new Error(error.message);
+  // The RPC returns the chosen trainer's id, or null when nobody was available.
+  return (data as string | null) ?? null;
 }
 
 /**

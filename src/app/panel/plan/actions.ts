@@ -429,6 +429,173 @@ export async function submitSickLeave(days: number, text: string): Promise<{ err
   }
 }
 
+export interface AutoFillOptions {
+  /** Total weekly course hours to schedule (each course is a 60-minute slot). */
+  hoursPerWeek: number;
+  /** ISO weekdays (1 = Mon … 7 = Sun) on which courses may be placed. */
+  weekdays: number[];
+  /** Earliest course start as "HH:MM" (Europe/Berlin). */
+  minTime: string;
+  /** Latest course end as "HH:MM" (Europe/Berlin). */
+  maxTime: string;
+}
+
+export type AutoFillResult =
+  | { error: string }
+  | { created: number; assigned: number; cancelled: number; capped: boolean };
+
+/** Parse an "HH:MM" string into minutes since midnight, or null if malformed. */
+function parseHm(value: string): number | null {
+  const m = /^(\d{1,2}):(\d{2})$/.exec(value.trim());
+  if (!m) return null;
+  const h = Number(m[1]);
+  const min = Number(m[2]);
+  if (h < 0 || h > 23 || min < 0 || min > 59) return null;
+  return h * 60 + min;
+}
+
+const COURSE_LEN_MINS = 60;
+
+/**
+ * Fill the current Europe/Berlin week (Mon–Sun) with course units, then let the
+ * substitution engine staff each one. Places one 60-minute course per time slot,
+ * cycling through the existing course types and rooms, on the chosen weekdays
+ * within [minTime, maxTime). Only future, still-empty slots are used, so the
+ * action is safe to re-run. Each created unit is handed to `assign_substitute`,
+ * which picks an available trainer (skipping the sick and those over their
+ * weekly hours) or leaves the slot leaderless — i.e. cancelled.
+ */
+export async function autoFillSchedule(opts: AutoFillOptions): Promise<AutoFillResult> {
+  try {
+    await requireAdmin();
+
+    const hours = Math.floor(opts.hoursPerWeek);
+    if (!Number.isFinite(hours) || hours < 1) {
+      throw new Error("Bitte eine gültige Stundenzahl pro Woche angeben.");
+    }
+    const weekdays = [...new Set(opts.weekdays)].filter((d) => d >= 1 && d <= 7);
+    if (weekdays.length === 0) {
+      throw new Error("Bitte mindestens einen Wochentag auswählen.");
+    }
+    const minM = parseHm(opts.minTime);
+    const maxM = parseHm(opts.maxTime);
+    if (minM == null || maxM == null) {
+      throw new Error("Ungültige Uhrzeit.");
+    }
+    if (maxM - minM < COURSE_LEN_MINS) {
+      throw new Error("Das Zeitfenster muss mindestens eine Stunde umfassen.");
+    }
+
+    const supabase = await createClient();
+
+    // Course types are required (each unit cycles through them); rooms optional.
+    const [{ data: typeRows }, { data: roomRows }] = await Promise.all([
+      supabase.from("course_types").select("id").order("name"),
+      supabase.from("rooms").select("id").order("room"),
+    ]);
+    const courseTypes = (typeRows ?? []).map((r) => r.id as string);
+    const rooms = (roomRows ?? []).map((r) => r.id as string);
+    if (courseTypes.length === 0) {
+      throw new Error("Keine Kursarten vorhanden. Bitte zuerst Kursarten anlegen.");
+    }
+
+    // Current Berlin week's Monday (ISO, Monday-based — matches the weekly-hours
+    // window used by the substitution engine).
+    const today = berlinToday();
+    const dow = new Date(`${today}T12:00:00Z`).getUTCDay(); // 0=Sun … 6=Sat
+    const isoDow = dow === 0 ? 7 : dow; // 1=Mon … 7=Sun
+    const monday = addDays(today, -(isoDow - 1));
+
+    const nowMs = Date.now();
+
+    // Existing units this week → block their exact start times so re-runs and
+    // manual courses are never doubled up (one course per slot ⇒ no clashes).
+    const weekStartIso = localInputToIso(`${monday}T00:00`)!;
+    const weekEndIso = localInputToIso(`${addDays(monday, 7)}T00:00`)!;
+    const { data: existing } = await supabase
+      .from("course_units")
+      .select("time_start")
+      .gte("time_start", weekStartIso)
+      .lt("time_start", weekEndIso);
+    const occupied = new Set<number>(
+      (existing ?? [])
+        .map((u) => (u.time_start ? new Date(u.time_start).getTime() : NaN))
+        .filter((n) => !Number.isNaN(n)),
+    );
+
+    // Build each enabled day's list of free, future slot ISO times.
+    const slotsByDay: string[][] = [];
+    for (const wd of weekdays.sort((a, b) => a - b)) {
+      const date = addDays(monday, wd - 1);
+      const daySlots: string[] = [];
+      for (let m = minM; m + COURSE_LEN_MINS <= maxM; m += COURSE_LEN_MINS) {
+        const hh = String(Math.floor(m / 60)).padStart(2, "0");
+        const mm = String(m % 60).padStart(2, "0");
+        const iso = localInputToIso(`${date}T${hh}:${mm}`);
+        if (!iso) continue;
+        const ms = new Date(iso).getTime();
+        if (ms <= nowMs || occupied.has(ms)) continue;
+        daySlots.push(iso);
+      }
+      slotsByDay.push(daySlots);
+    }
+
+    // Interleave across days (day0 09:00, day1 09:00, … day0 10:00, …) so the
+    // courses spread over the week rather than piling onto the first day.
+    const chosen: string[] = [];
+    const maxLen = Math.max(0, ...slotsByDay.map((d) => d.length));
+    for (let i = 0; i < maxLen && chosen.length < hours; i++) {
+      for (const day of slotsByDay) {
+        if (i < day.length) {
+          chosen.push(day[i]);
+          if (chosen.length >= hours) break;
+        }
+      }
+    }
+
+    if (chosen.length === 0) {
+      throw new Error(
+        "Keine freien Zeitfenster in dieser Woche. Eventuell sind alle passenden Zeiten bereits belegt oder vergangen.",
+      );
+    }
+
+    // Insert the units (leaderless), cycling course types and rooms.
+    const payload = chosen.map((iso, i) => ({
+      time_start: iso,
+      duration_mins: COURSE_LEN_MINS,
+      course_type: courseTypes[i % courseTypes.length],
+      room: rooms.length ? rooms[i % rooms.length] : null,
+      leader: null as string | null,
+    }));
+    const { data: inserted, error } = await supabase
+      .from("course_units")
+      .insert(payload)
+      .select("id");
+    if (error) throw new Error(error.message);
+
+    // Staff each new unit via the substitution engine; a null result means no
+    // eligible trainer was available → the course is effectively cancelled.
+    let assigned = 0;
+    for (const unit of inserted ?? []) {
+      const chosenLeader = await assignSubstitute(supabase, unit.id as string);
+      if (chosenLeader) assigned += 1;
+    }
+    const created = inserted?.length ?? 0;
+
+    revalidatePath("/panel/plan");
+    revalidatePath("/schedule");
+
+    return {
+      created,
+      assigned,
+      cancelled: created - assigned,
+      capped: chosen.length < hours,
+    };
+  } catch (e) {
+    return { error: e instanceof Error ? e.message : "Füllen fehlgeschlagen" };
+  }
+}
+
 /**
  * A trainer declines a course they were assigned to as a substitute. Their
  * rejection is recorded (so the engine excludes them on the retry), they are

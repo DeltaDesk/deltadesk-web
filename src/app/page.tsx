@@ -68,13 +68,22 @@ export default async function Home() {
           <IconTriangle size={22} stroke={2} className="text-blue-500" />
           <span className="text-lg font-semibold tracking-tight text-gray-900 font-space-grotesk">DeltaDesk</span>
         </div>
-        <Link
-          href={cta.href}
-          className="inline-flex items-center gap-2 rounded-lg px-4 py-2 text-sm font-medium text-gray-600 transition-colors hover:text-blue-600"
-        >
-          <cta.Icon size={18} stroke={2} />
-          {cta.label}
-        </Link>
+        <nav className="flex items-center gap-1 sm:gap-2">
+          <Link
+            href="/schedule"
+            className="inline-flex items-center gap-2 rounded-lg px-3 py-2 text-sm font-medium text-gray-600 transition-colors hover:text-blue-600 sm:px-4"
+          >
+            <IconCalendar size={18} stroke={2} />
+            Stundenplan
+          </Link>
+          <Link
+            href={cta.href}
+            className="inline-flex items-center gap-2 rounded-lg px-3 py-2 text-sm font-medium text-gray-600 transition-colors hover:text-blue-600 sm:px-4"
+          >
+            <cta.Icon size={18} stroke={2} />
+            {cta.label}
+          </Link>
+        </nav>
       </header>
 
       {/* Hero */}
